@@ -4,14 +4,21 @@ using System.IO;
 using MySql.Data;
 using MySql.Data.MySqlClient;
 
+using System.Security.Cryptography;
+
 namespace file_scanner
 {
     class Program
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            Console.WriteLine("Starting...");
 
+            Console.ReadLine();
+        }
+
+        static void ScanFolder()
+        {
             DirectoryInfo di = new DirectoryInfo(@"/mnt/unraid");
 
             FileInfo[] fileList = di.GetFiles("*", SearchOption.AllDirectories);
@@ -20,23 +27,30 @@ namespace file_scanner
 
             foreach (FileInfo file in fileList)
             {
-                // Console.WriteLine(file.Name);
                 WriteToDB($@"INSERT INTO `Listings`(`FileName`, `FilePath`, `Checksum`, `FileSize`, `ChecksumDate`) VALUES ('{EscapeString(file.Name)}', '{EscapeString(file.Directory.ToString())}', 'test', {file.Length}, null)");
             }
 
             Console.WriteLine("DB updates completed.");
-
-            // WriteToDB();
-
-            Console.ReadLine();
         }
-
+        static string HashFile(string path)
+        {
+            using (var md5 = MD5.Create())
+            {
+                using (var stream = File.OpenRead(path))
+                {
+                    var hash = md5.ComputeHash(stream);
+                    return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+                }
+            }
+        }
         static string EscapeString(string toEscape)
         {
-            if (toEscape.Contains("'")) {
-                string escaped = toEscape.Replace("'", "''");
-                return escaped;
-            } else {
+            if (toEscape.Contains("'"))
+            {
+                return toEscape.Replace("'", "''");
+            }
+            else
+            {
                 return toEscape;
             }
         }
@@ -47,7 +61,6 @@ namespace file_scanner
             MySqlConnection conn = new MySqlConnection(connStr);
             try
             {
-                // Console.WriteLine("Connecting to MySQL...");
                 conn.Open();
 
                 // string sql = "SELECT Name, HeadOfState FROM Country WHERE Continent='Oceania'";
@@ -68,7 +81,6 @@ namespace file_scanner
             }
 
             conn.Close();
-            // Console.WriteLine("Done.");
         }
     }
 }
