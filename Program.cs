@@ -26,6 +26,7 @@ namespace file_scanner
             Configuration = builder.Build();
 
             SQLConnectionString = $@"server={Configuration["SQLServer"]};user={Configuration["SQLUser"]};database={Configuration["SQLDatabase"]};port={Configuration["SQLPort"]};password={Configuration["SQLPassword"]};SslMode=none";
+            Console.WriteLine(SQLConnectionString);
 
             // TODO mathematically define data ranges to remove dependency on byte specifications
             // UpdateFileHashes(0, 1024);                   // 0 - 1kb
@@ -39,15 +40,16 @@ namespace file_scanner
             // UpdateFileHashes(16777216, 67108864);        // 16mb - 64mb
             // UpdateFileHashes(67108864, 268435456)        // 64mb - 256mb
             // UpdateFileHashes(268435456, 1073741824);     // 256mb - 1gb
+            UpdateFileHashes(1073741824, 4294967296);     // 1gb - 4gb
 
-            // Console.WriteLine("done");
+            Console.WriteLine("done");
 
             Console.ReadLine();
         }
 
         static void ScanFolder()
         {
-            DirectoryInfo di = new DirectoryInfo(@"/mnt/unraid");
+            DirectoryInfo di = new DirectoryInfo($@"{Configuration["SQLServer"]}");
 
             FileInfo[] fileList = di.GetFiles("*", SearchOption.AllDirectories);
 

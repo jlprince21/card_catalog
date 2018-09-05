@@ -1,5 +1,5 @@
 {
-
+    "DirectoryToScan": "XXX",
     "SQLDatabase": "XXX",
     "SQLPassword": "XXX",
     "SQLPort": "3306",
