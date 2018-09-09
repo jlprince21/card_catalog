@@ -5,3 +5,4 @@ authors = ["Luke Prince <luke@theprinces.org>"]
 
 [dependencies]
 config = "0.9.0"
+mysql = "*"
