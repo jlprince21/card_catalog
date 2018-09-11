@@ -16,11 +16,11 @@ fn main() {
         .merge(config::File::with_name("settings"))
         .expect("Config file missing!");
 
-    let sql_user = format!("{}", settings.get_str("SQLUser").unwrap());
-    let sql_password = format!("{}", settings.get_str("SQLPassword").unwrap());
-    let sql_server = format!("{}", settings.get_str("SQLServer").unwrap());
-    let sql_port = format!("{}", settings.get_str("SQLPort").unwrap());
-    let sql_database = format!("{}", settings.get_str("SQLDatabase").unwrap());
+    let sql_user = get_setting(&settings, "SQLUser".to_string());
+    let sql_password = get_setting(&settings, "SQLPassword".to_string());
+    let sql_server = get_setting(&settings, "SQLServer".to_string());
+    let sql_port = get_setting(&settings, "SQLPort".to_string());
+    let sql_database = get_setting(&settings, "SQLDatabase".to_string());
 
     let connection_string = format!("mysql://{}:{}@{}:{}/{}", sql_user, sql_password, sql_server, sql_port, sql_database);
     println!("{}", connection_string);
@@ -43,4 +43,8 @@ fn main() {
     }).unwrap(); // Unwrap `Vec<Listing>`
 
     println!("{:?}", selected_listings);
+}
+
+fn get_setting(settings: &config::Config, key: String) -> String {
+    format!("{}", settings.get_str(&key).unwrap())
 }
