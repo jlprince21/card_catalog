@@ -1,7 +1,13 @@
 extern crate config;
 extern crate mysql;
+extern crate blake2;
 
 use mysql as my;
+use blake2::{Blake2b, Digest};
+use std::env;
+use std::fs::File;
+use std::io::prelude::*;
+use std::path::Path;
 
 // derive line enables easy printing of struct
 #[derive(Debug)]
@@ -10,6 +16,8 @@ struct Listing {
 }
 
 fn main() {
+    println!("{}", hash_file("/path/to/file".to_string()));
+
     let mut settings = config::Config::default();
 
     settings
@@ -47,4 +55,30 @@ fn main() {
 
 fn get_setting(settings: &config::Config, key: String) -> String {
     format!("{}", settings.get_str(&key).unwrap())
+}
+
+fn hash_file(mut file_path: String) -> String {
+    let mut file_hasher = Blake2b::new();
+    let vec = read_file(file_path);
+    file_hasher.input(&vec);
+    let hash = file_hasher.result();
+    format!("{:x}", hash)
+}
+
+fn read_file(mut file_name: String) -> Vec<u8> {
+    // via https://stackoverflow.com/a/43123023
+    //file_name = file_name.replace("/", "");
+    //
+    // if file_name.is_empty() {
+    //     file_name = String::from("index.html");
+    // }
+
+    let path = Path::new(&file_name);
+    if !path.exists() {
+        return String::from("Not Found!").into();
+    }
+    let mut file_content = Vec::new();
+    let mut file = File::open(&file_name).expect("Unable to open file");
+    file.read_to_end(&mut file_content).expect("Unable to read");
+    file_content
 }
