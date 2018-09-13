@@ -6,6 +6,7 @@ use mysql as my;
 use blake2::{Blake2b, Digest};
 use std::env;
 use std::fs::File;
+use std::io::BufReader;
 use std::io::prelude::*;
 use std::path::Path;
 
@@ -16,7 +17,7 @@ struct Listing {
 }
 
 fn main() {
-    println!("{}", hash_file("/path/to/file".to_string()));
+    println!("{}", hash_file(&"/path/to/file".to_string()));
 
     let mut settings = config::Config::default();
 
@@ -57,28 +58,30 @@ fn get_setting(settings: &config::Config, key: String) -> String {
     format!("{}", settings.get_str(&key).unwrap())
 }
 
-fn hash_file(mut file_path: String) -> String {
-    let mut file_hasher = Blake2b::new();
-    let vec = read_file(file_path);
-    file_hasher.input(&vec);
-    let hash = file_hasher.result();
-    format!("{:x}", hash)
-}
-
-fn read_file(mut file_name: String) -> Vec<u8> {
-    // via https://stackoverflow.com/a/43123023
-    //file_name = file_name.replace("/", "");
-    //
-    // if file_name.is_empty() {
-    //     file_name = String::from("index.html");
-    // }
-
+fn hash_file(file_name: &String) -> String {
     let path = Path::new(&file_name);
     if !path.exists() {
         return String::from("Not Found!").into();
     }
-    let mut file_content = Vec::new();
+
+    let mut file_hasher = Blake2b::new();
+
+    // via https://stackoverflow.com/q/37079342
+    const CAP: usize = 1024 * 1024 * 128; // TODO 18-09-12 Make buffer size customizable.
     let mut file = File::open(&file_name).expect("Unable to open file");
-    file.read_to_end(&mut file_content).expect("Unable to read");
-    file_content
+    let mut reader = BufReader::with_capacity(CAP, file);
+
+    loop {
+        let length = {
+            let buffer = reader.fill_buf().expect("Read error");
+            // do stuff with buffer here
+            file_hasher.input(buffer);
+            buffer.len()
+        };
+        if length == 0 { break; }
+        reader.consume(length);
+    }
+
+    let hash = file_hasher.result();
+    format!("{:x}", hash)
 }
