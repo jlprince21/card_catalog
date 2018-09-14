@@ -1,11 +1,14 @@
 extern crate config;
 extern crate mysql;
-extern crate blake2;
+extern crate twox_hash;
 
+// MariaDB
 use mysql as my;
-use blake2::{Blake2b, Digest};
-use std::env;
+
+// file hashing
+use twox_hash::XxHash;
 use std::fs::File;
+use std::hash::Hasher;
 use std::io::BufReader;
 use std::io::prelude::*;
 use std::path::Path;
@@ -43,7 +46,7 @@ fn main() {
         // will map each `MyResult` to contained `row` (no proper error handling)
         // and second call to `map` will map each `row` to `Listing`
         result.map(|x| x.unwrap()).map(|row| {
-            // ⚠️ Note that from_row will panic if you don't follow your schema
+            // Note that from_row will panic if you don't follow your schema
             let FileName = my::from_row(row);
             Listing {
                 file_name: FileName,
@@ -64,24 +67,23 @@ fn hash_file(file_name: &String) -> String {
         return String::from("Not Found!").into();
     }
 
-    let mut file_hasher = Blake2b::new();
+    let mut file_hasher = XxHash::default();
 
     // via https://stackoverflow.com/q/37079342
-    const CAP: usize = 1024 * 1024 * 128; // TODO 18-09-12 Make buffer size customizable.
+    const CAP: usize = 1024 * 128; // 18-09-13 Increasing buffer size doesn't seem to improve performance.
     let mut file = File::open(&file_name).expect("Unable to open file");
     let mut reader = BufReader::with_capacity(CAP, file);
 
     loop {
         let length = {
             let buffer = reader.fill_buf().expect("Read error");
-            // do stuff with buffer here
-            file_hasher.input(buffer);
+            file_hasher.write(buffer);
             buffer.len()
         };
         if length == 0 { break; }
         reader.consume(length);
     }
 
-    let hash = file_hasher.result();
+    let hash = file_hasher.finish();
     format!("{:x}", hash)
 }
