@@ -6,7 +6,7 @@ database. Some things it gathers include:
 1. File name
 2. Path
 3. Size
-4. BLAKE2 checksum
+4. XxHash checksum
 
 # Getting Started
 
