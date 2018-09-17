@@ -7,6 +7,7 @@ extern crate mysql;
 
 // MariaDB
 use mysql as my;
+use mysql::from_row;
 
 use walkdir::{DirEntry, WalkDir};
 
@@ -47,8 +48,6 @@ fn main() {
 
     start_hashing(&"/path/to/file".to_string(), &pool);
 
-    println!("{}", hash_file(&"/path/to/file".to_string()));
-
     let mut settings = config::Config::default();
 
     settings
@@ -82,6 +81,10 @@ fn main() {
     }).unwrap(); // Unwrap `Vec<Listing>`
 
     println!("{:?}", selected_listings);
+}
+
+fn escape_sql_string(file_path: &String) -> String {
+    str::replace(file_path, "'", "''")
 }
 
 fn get_file_len(file_path: &String) -> u64 {
@@ -125,6 +128,23 @@ fn is_dir(entry: &DirEntry) -> bool {
     metadata.is_dir()
 }
 
+fn is_file_hashed(file_path: &String, pool: &my::Pool) -> bool {
+    // TODO 18-09-17 Query for checksum being empty/null instead of a simple count
+    let query = format!(r"SELECT count(1) from `Listings` where FilePath = '{}'", escape_sql_string(&file_path));
+
+    for row in pool.prep_exec(query, ()).unwrap() {
+        let a: u32 = from_row(row.unwrap());
+
+        if a == 0 {
+            return false
+        } else {
+            return true
+        }
+    }
+
+    false
+}
+
 fn start_hashing(root_directory: &String, pool: &my::Pool) {
     let walker = WalkDir::new(root_directory).into_iter();
     for entry in walker.filter_map(|e| e.ok()) {
@@ -132,19 +152,24 @@ fn start_hashing(root_directory: &String, pool: &my::Pool) {
             // do nothing
         } else {
             let file_path = entry.path().display().to_string();
-            // println!("{} {:?} {} {}", get_file_len(&file_path), entry.file_name(), hash_file(&file_path), &file_path);
 
-            // TODO 18-09-16 This SQL is pretty bad. Need to use params!, error checkign, and clean this up in general.
-            let command = format!(r"INSERT INTO `Listings`
-                    (`FileName`, `FilePath`, `Checksum`, `FileSize`)
-                    VALUES
-                    ('{}', '{}', '{}', {})",
-                    entry.file_name().to_str().unwrap(),
-                    entry.path().display().to_string(),
-                    hash_file(&file_path),
-                    get_file_len(&file_path));
-            println!("command: {}", command);
-            pool.prep_exec(command, ());
+            let is_hashed: bool = is_file_hashed(&file_path, &pool);
+
+            if is_hashed == true {
+                println!("skipping hash for {}", &file_path);
+            } else {
+                // TODO 18-09-16 This SQL is pretty bad. Need to use params!, error checking, and general cleanup.
+                let command = format!(r"INSERT INTO `Listings`
+                        (`FileName`, `FilePath`, `Checksum`, `FileSize`)
+                        VALUES
+                        ('{}', '{}', '{}', {})",
+                        escape_sql_string(&entry.file_name().to_str().unwrap().to_string()),
+                        escape_sql_string(&entry.path().display().to_string()),
+                        hash_file(&file_path),
+                        get_file_len(&file_path));
+                println!("hashing: {}", command);
+                pool.prep_exec(command, ());
+            }
         }
     }
 }
