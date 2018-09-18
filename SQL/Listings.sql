@@ -1,9 +1,9 @@
 CREATE TABLE `Listings` (
- `GUID` int(10) unsigned NOT NULL AUTO_INCREMENT,
- `FileName` mediumtext NOT NULL,
- `FilePath` mediumtext NOT NULL,
- `Checksum` mediumtext,
- `FileSize` bigint(20) unsigned NOT NULL,
- `ChecksumDate` datetime DEFAULT NULL,
- UNIQUE KEY `GUIDPrimary` (`GUID`)
-) ENGINE=InnoDB AUTO_INCREMENT=88568 DEFAULT CHARSET=utf8mb4
+ `guid` int(10) unsigned NOT NULL AUTO_INCREMENT,
+ `file_name` mediumtext NOT NULL,
+ `file_path` mediumtext NOT NULL,
+ `checksum` mediumtext,
+ `file_size` bigint(20) unsigned NOT NULL,
+ `checksum_date` datetime DEFAULT NULL,
+ UNIQUE KEY `GUIDPrimary` (`guid`)
+) ENGINE=InnoDB AUTO_INCREMENT=132375 DEFAULT CHARSET=utf8mb4

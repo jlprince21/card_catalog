@@ -109,7 +109,7 @@ fn is_dir(entry: &DirEntry) -> bool {
 
 fn is_file_hashed(file_path: &String, pool: &my::Pool) -> bool {
     // TODO 18-09-17 Query for checksum being empty/null instead of a simple count
-    let query = format!(r"SELECT count(1) from `Listings` where FilePath = '{}'", escape_sql_string(&file_path));
+    let query = format!(r"SELECT count(1) from `Listings` where file_path = '{}'", escape_sql_string(&file_path));
 
     for row in pool.prep_exec(query, ()).unwrap() {
         let a: u32 = from_row(row.unwrap());
@@ -126,16 +126,16 @@ fn is_file_hashed(file_path: &String, pool: &my::Pool) -> bool {
 
 fn print_listings(pool: &my::Pool) {
     let selected_listings: Vec<Listing> =
-    pool.prep_exec("SELECT FileName from Listings limit 10", ())
+    pool.prep_exec("SELECT file_name from Listings limit 10", ())
     .map(|result| { // In this closure we will map `QueryResult` to `Vec<Listing>`
         // `QueryResult` is iterator over `MyResult<row, err>` so first call to `map`
         // will map each `MyResult` to contained `row` (no proper error handling)
         // and second call to `map` will map each `row` to `Listing`
         result.map(|x| x.unwrap()).map(|row| {
             // Note that from_row will panic if you don't follow your schema
-            let FileName = my::from_row(row);
+            let file_name = my::from_row(row);
             Listing {
-                file_name: FileName,
+                file_name: file_name,
             }
         }).collect() // Collect Listings so now `QueryResult` is mapped to `Vec<Listing>`
     }).unwrap(); // Unwrap `Vec<Listing>`
@@ -158,7 +158,7 @@ fn start_hashing(root_directory: &String, pool: &my::Pool) {
             } else {
                 // TODO 18-09-16 This SQL is pretty bad. Need to use params!, error checking, and general cleanup.
                 let command = format!(r"INSERT INTO `Listings`
-                        (`FileName`, `FilePath`, `Checksum`, `FileSize`)
+                        (`file_name`, `file_path`, `checksum`, `file_size`)
                         VALUES
                         ('{}', '{}', '{}', {})",
                         escape_sql_string(&entry.file_name().to_str().unwrap().to_string()),
