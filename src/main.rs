@@ -28,59 +28,22 @@ struct Listing {
     file_name: String
 }
 
+struct Settings {
+    sql_user: String,
+    sql_password: String,
+    sql_server: String,
+    sql_port: String,
+    sql_database: String,
+}
+
 fn main() {
-    let mut settings = config::Config::default();
+    let settings: Settings = get_settings();
 
-    settings
-        .merge(config::File::with_name("settings"))
-        .expect("Config file missing!");
-
-    let sql_user = get_setting(&settings, "SQLUser".to_string());
-    let sql_password = get_setting(&settings, "SQLPassword".to_string());
-    let sql_server = get_setting(&settings, "SQLServer".to_string());
-    let sql_port = get_setting(&settings, "SQLPort".to_string());
-    let sql_database = get_setting(&settings, "SQLDatabase".to_string());
-
-    let connection_string = format!("mysql://{}:{}@{}:{}/{}", sql_user, sql_password, sql_server, sql_port, sql_database);
-    println!("{}", connection_string);
-
+    let connection_string = format!("mysql://{}:{}@{}:{}/{}", settings.sql_user, settings.sql_password, settings.sql_server, settings.sql_port, settings.sql_database);
     let pool = my::Pool::new(connection_string).unwrap();
 
-    start_hashing(&"/path/to/file".to_string(), &pool);
-
-    let mut settings = config::Config::default();
-
-    settings
-        .merge(config::File::with_name("settings"))
-        .expect("Config file missing!");
-
-    let sql_user = get_setting(&settings, "SQLUser".to_string());
-    let sql_password = get_setting(&settings, "SQLPassword".to_string());
-    let sql_server = get_setting(&settings, "SQLServer".to_string());
-    let sql_port = get_setting(&settings, "SQLPort".to_string());
-    let sql_database = get_setting(&settings, "SQLDatabase".to_string());
-
-    let connection_string = format!("mysql://{}:{}@{}:{}/{}", sql_user, sql_password, sql_server, sql_port, sql_database);
-    println!("{}", connection_string);
-
-    let pool = my::Pool::new(connection_string).unwrap();
-
-    let selected_listings: Vec<Listing> =
-    pool.prep_exec("SELECT FileName from Listings limit 10", ())
-    .map(|result| { // In this closure we will map `QueryResult` to `Vec<Listing>`
-        // `QueryResult` is iterator over `MyResult<row, err>` so first call to `map`
-        // will map each `MyResult` to contained `row` (no proper error handling)
-        // and second call to `map` will map each `row` to `Listing`
-        result.map(|x| x.unwrap()).map(|row| {
-            // Note that from_row will panic if you don't follow your schema
-            let FileName = my::from_row(row);
-            Listing {
-                file_name: FileName,
-            }
-        }).collect() // Collect Listings so now `QueryResult` is mapped to `Vec<Listing>`
-    }).unwrap(); // Unwrap `Vec<Listing>`
-
-    println!("{:?}", selected_listings);
+    // start_hashing(&"/path/to/file".to_string(), &pool);
+    // print_listings(&pool);
 }
 
 fn escape_sql_string(file_path: &String) -> String {
@@ -90,6 +53,22 @@ fn escape_sql_string(file_path: &String) -> String {
 fn get_file_len(file_path: &String) -> u64 {
     let metadata = std::fs::metadata(&file_path).unwrap();
     metadata.len()
+}
+
+fn get_settings() -> Settings {
+    let mut settings = config::Config::default();
+
+    settings
+        .merge(config::File::with_name("settings"))
+        .expect("Config file missing!");
+
+    Settings {
+        sql_user: get_setting(&settings, "SQLUser".to_string()),
+        sql_password: get_setting(&settings, "SQLPassword".to_string()),
+        sql_database: get_setting(&settings, "SQLDatabase".to_string()),
+        sql_port: get_setting(&settings, "SQLPort".to_string()),
+        sql_server: get_setting(&settings, "SQLServer".to_string())
+    }
 }
 
 fn get_setting(settings: &config::Config, key: String) -> String {
@@ -143,6 +122,25 @@ fn is_file_hashed(file_path: &String, pool: &my::Pool) -> bool {
     }
 
     false
+}
+
+fn print_listings(pool: &my::Pool) {
+    let selected_listings: Vec<Listing> =
+    pool.prep_exec("SELECT FileName from Listings limit 10", ())
+    .map(|result| { // In this closure we will map `QueryResult` to `Vec<Listing>`
+        // `QueryResult` is iterator over `MyResult<row, err>` so first call to `map`
+        // will map each `MyResult` to contained `row` (no proper error handling)
+        // and second call to `map` will map each `row` to `Listing`
+        result.map(|x| x.unwrap()).map(|row| {
+            // Note that from_row will panic if you don't follow your schema
+            let FileName = my::from_row(row);
+            Listing {
+                file_name: FileName,
+            }
+        }).collect() // Collect Listings so now `QueryResult` is mapped to `Vec<Listing>`
+    }).unwrap(); // Unwrap `Vec<Listing>`
+
+    println!("{:?}", selected_listings);
 }
 
 fn start_hashing(root_directory: &String, pool: &my::Pool) {
