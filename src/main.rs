@@ -2,13 +2,6 @@ extern crate config;
 extern crate twox_hash;
 extern crate walkdir;
 
-#[macro_use]
-extern crate mysql;
-
-// MariaDB
-use mysql as my;
-use mysql::from_row;
-
 use walkdir::{DirEntry, WalkDir};
 
 // file hashing
@@ -22,11 +15,20 @@ use std::fs::Metadata;
 use std::io::prelude::*;
 use std::path::Path;
 
-// derive line enables easy printing of struct
-#[derive(Debug)]
-struct Listing {
-    file_name: String
-}
+// start diesel
+
+#[macro_use]
+extern crate diesel;
+extern crate dotenv;
+
+pub mod schema;
+pub mod models;
+
+use diesel::prelude::*;
+use dotenv::dotenv;
+use std::env;
+
+// end diesel
 
 struct Settings {
     sql_user: String,
@@ -36,23 +38,46 @@ struct Settings {
     sql_database: String,
 }
 
+use self::models::{NewListing, Listing};
+
 fn main() {
-    let settings: Settings = get_settings();
+    // let settings: Settings = get_settings();
 
-    let connection_string = format!("mysql://{}:{}@{}:{}/{}", settings.sql_user, settings.sql_password, settings.sql_server, settings.sql_port, settings.sql_database);
-    let pool = my::Pool::new(connection_string).unwrap();
+    let connection = establish_connection();
 
-    // start_hashing(&"/path/to/file".to_string(), &pool);
-    // print_listings(&pool);
+    start_hashing(&"/path/to/file".to_string(), &connection);
+}
+
+pub fn create_listing(conn: &PgConnection, checksum: &str, file_name: &str, file_path: &str, file_size: &i64) -> Listing {
+    use schema::listings;
+
+    let new_listing = NewListing {
+        checksum: checksum,
+        file_name: file_name,
+        file_path: file_path,
+        file_size: file_size,
+    };
+
+    diesel::insert_into(listings::table)
+        .values(&new_listing)
+        .get_result(conn)
+        .expect("Error saving new listing")
 }
 
 fn escape_sql_string(file_path: &String) -> String {
     str::replace(file_path, "'", "''")
 }
 
-fn get_file_len(file_path: &String) -> u64 {
+pub fn establish_connection() -> PgConnection {
+    dotenv().ok();
+
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    PgConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url))
+}
+
+fn get_file_len(file_path: &String) -> i64 {
     let metadata = std::fs::metadata(&file_path).unwrap();
-    metadata.len()
+    metadata.len() as i64
 }
 
 fn get_settings() -> Settings {
@@ -85,7 +110,7 @@ fn hash_file(file_name: &String) -> String {
 
     // via https://stackoverflow.com/q/37079342
     const CAP: usize = 1024 * 128; // 18-09-13 Increasing buffer size doesn't seem to improve performance.
-    let mut file = File::open(&file_name).expect("Unable to open file");
+    let file = File::open(&file_name).expect("Unable to open file");
     let mut reader = BufReader::with_capacity(CAP, file);
 
     loop {
@@ -107,43 +132,24 @@ fn is_dir(entry: &DirEntry) -> bool {
     metadata.is_dir()
 }
 
-fn is_file_hashed(file_path: &String, pool: &my::Pool) -> bool {
+fn is_file_hashed(file_path_to_check: &String, conn: &PgConnection) -> bool {
     // TODO 18-09-17 Query for checksum being empty/null instead of a simple count
-    let query = format!(r"SELECT count(1) from `Listings` where file_path = '{}'", escape_sql_string(&file_path));
+    use self::schema::listings::dsl::*;
 
-    for row in pool.prep_exec(query, ()).unwrap() {
-        let a: u32 = from_row(row.unwrap());
+    let results = listings
+        .filter(file_path.eq(file_path_to_check))
+        .limit(1)
+        .load::<Listing>(conn)
+        .expect("Error loading posts");
 
-        if a == 0 {
-            return false
-        } else {
-            return true
-        }
+    if results.len() >= 1 {
+        return true
+    } else {
+        return false
     }
-
-    false
 }
 
-fn print_listings(pool: &my::Pool) {
-    let selected_listings: Vec<Listing> =
-    pool.prep_exec("SELECT file_name from Listings limit 10", ())
-    .map(|result| { // In this closure we will map `QueryResult` to `Vec<Listing>`
-        // `QueryResult` is iterator over `MyResult<row, err>` so first call to `map`
-        // will map each `MyResult` to contained `row` (no proper error handling)
-        // and second call to `map` will map each `row` to `Listing`
-        result.map(|x| x.unwrap()).map(|row| {
-            // Note that from_row will panic if you don't follow your schema
-            let file_name = my::from_row(row);
-            Listing {
-                file_name: file_name,
-            }
-        }).collect() // Collect Listings so now `QueryResult` is mapped to `Vec<Listing>`
-    }).unwrap(); // Unwrap `Vec<Listing>`
-
-    println!("{:?}", selected_listings);
-}
-
-fn start_hashing(root_directory: &String, pool: &my::Pool) {
+fn start_hashing(root_directory: &String, conn: &PgConnection) {
     let walker = WalkDir::new(root_directory).into_iter();
     for entry in walker.filter_map(|e| e.ok()) {
         if is_dir(&entry) {
@@ -151,22 +157,18 @@ fn start_hashing(root_directory: &String, pool: &my::Pool) {
         } else {
             let file_path = entry.path().display().to_string();
 
-            let is_hashed: bool = is_file_hashed(&file_path, &pool);
+            let is_hashed: bool = is_file_hashed(&file_path, &conn);
 
             if is_hashed == true {
                 println!("skipping hash for {}", &file_path);
             } else {
-                // TODO 18-09-16 This SQL is pretty bad. Need to use params!, error checking, and general cleanup.
-                let command = format!(r"INSERT INTO `Listings`
-                        (`file_name`, `file_path`, `checksum`, `file_size`)
-                        VALUES
-                        ('{}', '{}', '{}', {})",
-                        escape_sql_string(&entry.file_name().to_str().unwrap().to_string()),
-                        escape_sql_string(&entry.path().display().to_string()),
-                        hash_file(&file_path),
-                        get_file_len(&file_path));
-                println!("hashing: {}", command);
-                pool.prep_exec(command, ());
+                // TODO 18-09-22 Need to research diesel error checking and see if strings can be cleaned up
+                println!("hashing: {}", &file_path);
+                create_listing(&conn,
+                            &hash_file(&file_path),
+                            &escape_sql_string(&entry.file_name().to_str().unwrap().to_string()),
+                            &escape_sql_string(&entry.path().display().to_string()),
+                            &get_file_len(&file_path));
             }
         }
     }

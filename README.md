@@ -1,6 +1,6 @@
 # File Scanner
 
-Written in Rust, this program collects file metadata and stores it in a MariaDB
+Written in Rust, this program collects file metadata and stores it in a PostgreSQL
 database. Some things it gathers include:
 
 1. File name
@@ -10,10 +10,18 @@ database. Some things it gathers include:
 
 # Getting Started
 
-To run the project, you will need to have a MariaDB SQL database running somewhere
-with the tables setup according to the `Listings.sql` file in the `SQL` folder.
-Set appropriate values in `settings.toml` to point to your database and the
-root directory to recursively scan files of.
+To run the project, you will need a PostgreSQL database setup and configure the
+`.env` file in this project to point to your database.
+
+Next, you will need to use [diesel](http://diesel.rs/) to run the database migrations
+necessary to create tables needed for the project.
+
+```
+diesel migration run
+```
+
+For now you will have to change in `main.rs` which folder you would like to start
+scan. Configuration reading will be updated to use `.env` soon.
 
 Once the prerequisites are met, you may run or build the project with:
 
