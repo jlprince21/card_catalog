@@ -11,7 +11,8 @@ database. Some things it gathers include:
 # Getting Started
 
 To run the project, you will need a PostgreSQL database setup and configure the
-`.env` file in this project to point to your database.
+`.env` file in this project to point to your database. See *Configuration* section
+below.
 
 Next, you will need to use [diesel](http://diesel.rs/) to run the database migrations
 necessary to create tables needed for the project.
@@ -20,8 +21,7 @@ necessary to create tables needed for the project.
 diesel migration run
 ```
 
-For now you will have to change in `main.rs` which folder you would like to start
-scan. Configuration reading will be updated to use `.env` soon.
+Next, set any remaining configuration values as detailed in *Configuration*.
 
 Once the prerequisites are met, you may run or build the project with:
 
@@ -33,6 +33,13 @@ cargo run
 cargo build --release
 
 ```
+
+# Configuration
+
+`.env` configuration setting include:
+
+1. DATABASE_URL - PostgreSQL connection string.
+2. DIRECTORY_TO_SCAN - root directory location to start scanning files from.
 
 # License
 

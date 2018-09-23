@@ -31,21 +31,18 @@ use std::env;
 // end diesel
 
 struct Settings {
-    sql_user: String,
-    sql_password: String,
-    sql_server: String,
-    sql_port: String,
-    sql_database: String,
+    directory_to_scan: String,
+    pg_connection_string: String
 }
 
 use self::models::{NewListing, Listing};
 
 fn main() {
-    // let settings: Settings = get_settings();
+    let settings: Settings = get_settings();
 
-    let connection = establish_connection();
+    let connection = establish_connection(&settings.pg_connection_string);
 
-    start_hashing(&"/path/to/file".to_string(), &connection);
+    start_hashing(&settings.directory_to_scan, &connection);
 }
 
 pub fn create_listing(conn: &PgConnection, checksum: &str, file_name: &str, file_path: &str, file_size: &i64) -> Listing {
@@ -68,11 +65,8 @@ fn escape_sql_string(file_path: &String) -> String {
     str::replace(file_path, "'", "''")
 }
 
-pub fn establish_connection() -> PgConnection {
-    dotenv().ok();
-
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    PgConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url))
+fn establish_connection(connection: &String) -> PgConnection {
+    PgConnection::establish(&connection).expect(&format!("Error connecting to {}", connection))
 }
 
 fn get_file_len(file_path: &String) -> i64 {
@@ -81,18 +75,11 @@ fn get_file_len(file_path: &String) -> i64 {
 }
 
 fn get_settings() -> Settings {
-    let mut settings = config::Config::default();
-
-    settings
-        .merge(config::File::with_name("settings"))
-        .expect("Config file missing!");
+    dotenv().ok();
 
     Settings {
-        sql_user: get_setting(&settings, "SQLUser".to_string()),
-        sql_password: get_setting(&settings, "SQLPassword".to_string()),
-        sql_database: get_setting(&settings, "SQLDatabase".to_string()),
-        sql_port: get_setting(&settings, "SQLPort".to_string()),
-        sql_server: get_setting(&settings, "SQLServer".to_string())
+        directory_to_scan: env::var("DIRECTORY_TO_SCAN").expect("DIRECTORY_TO_SCAN must be set"),
+        pg_connection_string: env::var("DATABASE_URL").expect("DATABASE_URL must be set")
     }
 }
 
@@ -157,7 +144,7 @@ fn start_hashing(root_directory: &String, conn: &PgConnection) {
         } else {
             let file_path = entry.path().display().to_string();
 
-            let is_hashed: bool = is_file_hashed(&file_path, &conn);
+            let is_hashed: bool = is_file_hashed(&escape_sql_string(&file_path), &conn);
 
             if is_hashed == true {
                 println!("skipping hash for {}", &file_path);
