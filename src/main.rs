@@ -42,7 +42,8 @@ fn main() {
 
     let connection = establish_connection(&settings.pg_connection_string);
 
-    start_hashing(&settings.directory_to_scan, &connection);
+    // start_hashing(&settings.directory_to_scan, &connection);
+    // delete_missing_listings(&connection);
 }
 
 pub fn create_listing(conn: &PgConnection, checksum: &str, file_name: &str, file_path: &str, file_size: &i64) -> Listing {
@@ -61,12 +62,57 @@ pub fn create_listing(conn: &PgConnection, checksum: &str, file_name: &str, file
         .expect("Error saving new listing")
 }
 
+fn delete_missing_listings(conn: &PgConnection) {
+    use schema::listings::dsl::*;
+
+    match find_missing(&conn) {
+        None => println!("none missing"),
+        Some(x) =>
+            {
+                println!("some missing");
+                for y in x {
+                    println!("removing listing for missing file: {}", y.file_path);
+
+                    // 18-09-23 TODO: One day, may want to mark listings as deleted instead of removing them
+                    diesel::delete(listings.filter(file_path.eq(y.file_path)))
+                        .execute(conn)
+                        .expect("Error deleting listing");
+                }
+            }
+    }
+}
+
+fn does_file_exist(file_path: &String) -> bool {
+    Path::new(file_path).exists()
+}
+
 fn escape_sql_string(file_path: &String) -> String {
     str::replace(file_path, "'", "''")
 }
 
 fn establish_connection(connection: &String) -> PgConnection {
     PgConnection::establish(&connection).expect(&format!("Error connecting to {}", connection))
+}
+
+fn find_missing(conn: &PgConnection) -> Option<Vec<models::Listing>> {
+    use schema::listings::dsl::*;
+
+    let results = listings
+        .load::<Listing>(conn)
+        .expect("Error loading listings");
+
+    let mut missing: Vec<models::Listing> = Vec::new();
+
+    for listing in results {
+        if does_file_exist(&unescape_sql_string(&listing.file_path)) == false {
+            missing.push(listing);
+        }
+    }
+
+    match missing.len() {
+        0 => None,
+        _ => Some(missing)
+    }
 }
 
 fn get_file_len(file_path: &String) -> i64 {
@@ -159,4 +205,8 @@ fn start_hashing(root_directory: &String, conn: &PgConnection) {
             }
         }
     }
+}
+
+fn unescape_sql_string(file_path: &String) -> String {
+    str::replace(file_path, "''", "'")
 }
