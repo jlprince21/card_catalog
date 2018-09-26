@@ -11,7 +11,6 @@ use std::io::BufReader;
 
 // file loading/metadata
 use std::fs::File;
-use std::fs::Metadata;
 use std::io::prelude::*;
 use std::path::Path;
 
@@ -19,26 +18,21 @@ use std::path::Path;
 
 #[macro_use]
 extern crate diesel;
-extern crate dotenv;
 
 pub mod schema;
 pub mod models;
 
 use diesel::prelude::*;
-use dotenv::dotenv;
-use std::env;
 
 // end diesel
 
-struct Settings {
-    directory_to_scan: String,
-    pg_connection_string: String
-}
+mod mods;
+use mods::util as Util;
 
 use self::models::{NewListing, Listing};
 
 fn main() {
-    let settings: Settings = get_settings();
+    let settings: Util::Settings = Util::get_settings();
 
     let connection = establish_connection(&settings.pg_connection_string);
 
@@ -82,14 +76,6 @@ fn delete_missing_listings(conn: &PgConnection) {
     }
 }
 
-fn does_file_exist(file_path: &String) -> bool {
-    Path::new(file_path).exists()
-}
-
-fn escape_sql_string(file_path: &String) -> String {
-    str::replace(file_path, "'", "''")
-}
-
 fn establish_connection(connection: &String) -> PgConnection {
     PgConnection::establish(&connection).expect(&format!("Error connecting to {}", connection))
 }
@@ -104,7 +90,7 @@ fn find_missing(conn: &PgConnection) -> Option<Vec<models::Listing>> {
     let mut missing: Vec<models::Listing> = Vec::new();
 
     for listing in results {
-        if does_file_exist(&unescape_sql_string(&listing.file_path)) == false {
+        if Util::does_file_exist(&Util::unescape_sql_string(&listing.file_path)) == false {
             missing.push(listing);
         }
     }
@@ -113,24 +99,6 @@ fn find_missing(conn: &PgConnection) -> Option<Vec<models::Listing>> {
         0 => None,
         _ => Some(missing)
     }
-}
-
-fn get_file_len(file_path: &String) -> i64 {
-    let metadata = std::fs::metadata(&file_path).unwrap();
-    metadata.len() as i64
-}
-
-fn get_settings() -> Settings {
-    dotenv().ok();
-
-    Settings {
-        directory_to_scan: env::var("DIRECTORY_TO_SCAN").expect("DIRECTORY_TO_SCAN must be set"),
-        pg_connection_string: env::var("DATABASE_URL").expect("DATABASE_URL must be set")
-    }
-}
-
-fn get_setting(settings: &config::Config, key: String) -> String {
-    format!("{}", settings.get_str(&key).unwrap())
 }
 
 fn hash_file(file_name: &String) -> String {
@@ -160,11 +128,6 @@ fn hash_file(file_name: &String) -> String {
     format!("{:x}", hash)
 }
 
-fn is_dir(entry: &DirEntry) -> bool {
-    let metadata = std::fs::metadata(entry.path().display().to_string()).unwrap();
-    metadata.is_dir()
-}
-
 fn is_file_hashed(file_path_to_check: &String, conn: &PgConnection) -> bool {
     // TODO 18-09-17 Query for checksum being empty/null instead of a simple count
     use self::schema::listings::dsl::*;
@@ -185,12 +148,12 @@ fn is_file_hashed(file_path_to_check: &String, conn: &PgConnection) -> bool {
 fn start_hashing(root_directory: &String, conn: &PgConnection) {
     let walker = WalkDir::new(root_directory).into_iter();
     for entry in walker.filter_map(|e| e.ok()) {
-        if is_dir(&entry) {
+        if Util::is_dir(&entry) {
             // do nothing
         } else {
             let file_path = entry.path().display().to_string();
 
-            let is_hashed: bool = is_file_hashed(&escape_sql_string(&file_path), &conn);
+            let is_hashed: bool = is_file_hashed(&Util::escape_sql_string(&file_path), &conn);
 
             if is_hashed == true {
                 println!("skipping hash for {}", &file_path);
@@ -199,14 +162,10 @@ fn start_hashing(root_directory: &String, conn: &PgConnection) {
                 println!("hashing: {}", &file_path);
                 create_listing(&conn,
                             &hash_file(&file_path),
-                            &escape_sql_string(&entry.file_name().to_str().unwrap().to_string()),
-                            &escape_sql_string(&entry.path().display().to_string()),
-                            &get_file_len(&file_path));
+                            &Util::escape_sql_string(&entry.file_name().to_str().unwrap().to_string()),
+                            &Util::escape_sql_string(&entry.path().display().to_string()),
+                            &Util::get_file_len(&file_path));
             }
         }
     }
-}
-
-fn unescape_sql_string(file_path: &String) -> String {
-    str::replace(file_path, "''", "'")
 }
