@@ -3,7 +3,7 @@ extern crate walkdir;
 
 use std::env;
 use std::path::Path;
-use walkdir::{DirEntry, WalkDir};
+use self::walkdir::{DirEntry, WalkDir};
 
 pub struct Settings {
     pub directory_to_scan: String,

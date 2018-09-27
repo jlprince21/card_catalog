@@ -1,4 +1,7 @@
-use schema::listings;
+// suppress warnings for issue #50504 <https://github.com/rust-lang/rust/issues/50504>
+#![allow(proc_macro_derive_resolution_fallback)]
+
+use mods::schema::listings;
 
 #[derive(Queryable)]
 pub struct Listing {
