@@ -10,15 +10,15 @@ pub struct Settings {
     pub pg_connection_string: String
 }
 
-pub fn does_file_exist(file_path: &String) -> bool {
+pub fn does_file_exist(file_path: &str) -> bool {
     Path::new(file_path).exists()
 }
 
-pub fn escape_sql_string(file_path: &String) -> String {
+pub fn escape_sql_string(file_path: &str) -> String {
     str::replace(file_path, "'", "''")
 }
 
-pub fn get_file_len(file_path: &String) -> i64 {
+pub fn get_file_len(file_path: &str) -> i64 {
     use std::fs;
     let metadata = fs::metadata(&file_path).unwrap();
     metadata.len() as i64
@@ -39,6 +39,6 @@ pub fn is_dir(entry: &DirEntry) -> bool {
     metadata.is_dir()
 }
 
-pub fn unescape_sql_string(file_path: &String) -> String {
+pub fn unescape_sql_string(file_path: &str) -> String {
     str::replace(file_path, "''", "'")
 }

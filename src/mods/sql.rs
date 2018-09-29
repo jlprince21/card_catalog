@@ -7,10 +7,10 @@ pub fn create_listing(conn: &PgConnection, checksum: &str, file_name: &str, file
     use mods::schema::listings;
 
     let new_listing = NewListing {
-        checksum: checksum,
-        file_name: file_name,
-        file_path: file_path,
-        file_size: file_size,
+        checksum,
+        file_name,
+        file_path,
+        file_size,
     };
 
     diesel::insert_into(listings::table)
@@ -19,6 +19,6 @@ pub fn create_listing(conn: &PgConnection, checksum: &str, file_name: &str, file
         .expect("Error saving new listing")
 }
 
-pub fn establish_connection(connection: &String) -> PgConnection {
-    PgConnection::establish(&connection).expect(&format!("Error connecting to {}", connection))
+pub fn establish_connection(connection: &str) -> PgConnection {
+    PgConnection::establish(&connection).unwrap_or_else(|_| panic!("Error connecting to {}", connection))
 }

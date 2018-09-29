@@ -52,7 +52,7 @@ pub fn find_missing(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
     let mut missing: Vec<Models::Listing> = Vec::new();
 
     for listing in results {
-        if Util::does_file_exist(&Util::unescape_sql_string(&listing.file_path)) == false {
+        if !Util::does_file_exist(&Util::unescape_sql_string(&listing.file_path)) {
             missing.push(listing);
         }
     }
@@ -63,10 +63,10 @@ pub fn find_missing(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
     }
 }
 
-pub fn hash_file(file_name: &String) -> String {
+pub fn hash_file(file_name: &str) -> String {
     let path = Path::new(&file_name);
     if !path.exists() {
-        return String::from("Not Found!").into();
+        return String::from("Not Found!");
     }
 
     let mut file_hasher = XxHash::default();
@@ -90,7 +90,7 @@ pub fn hash_file(file_name: &String) -> String {
     format!("{:x}", hash)
 }
 
-pub fn is_file_hashed(file_path_to_check: &String, conn: &PgConnection) -> bool {
+pub fn is_file_hashed(file_path_to_check: &str, conn: &PgConnection) -> bool {
     // TODO 18-09-17 Query for checksum being empty/null instead of a simple count
     use Schema::listings::dsl::*;
 
@@ -100,14 +100,10 @@ pub fn is_file_hashed(file_path_to_check: &String, conn: &PgConnection) -> bool 
         .load::<Listing>(conn)
         .expect("Error loading posts");
 
-    if results.len() >= 1 {
-        return true
-    } else {
-        return false
-    }
+    !results.is_empty()
 }
 
-pub fn start_hashing(root_directory: &String, conn: &PgConnection) {
+pub fn start_hashing(root_directory: &str, conn: &PgConnection) {
     let walker = WalkDir::new(root_directory).into_iter();
     for entry in walker.filter_map(|e| e.ok()) {
         if Util::is_dir(&entry) {
@@ -117,7 +113,7 @@ pub fn start_hashing(root_directory: &String, conn: &PgConnection) {
 
             let is_hashed: bool = is_file_hashed(&Util::escape_sql_string(&file_path), &conn);
 
-            if is_hashed == true {
+            if is_hashed {
                 println!("skipping hash for {}", &file_path);
             } else {
                 // TODO 18-09-22 Need to research diesel error checking and see if strings can be cleaned up
