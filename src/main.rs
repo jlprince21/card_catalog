@@ -20,4 +20,5 @@ fn main() {
 
     // Capabilities::start_hashing(&settings.directory_to_scan, &connection);
     // Capabilities::delete_missing_listings(&connection);
+    // Capabilities::find_duplicates(&connection);
 }

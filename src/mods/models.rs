@@ -3,7 +3,8 @@
 
 use mods::schema::listings;
 
-#[derive(Queryable)]
+#[derive(Queryable, QueryableByName)]
+#[table_name = "listings"]
 pub struct Listing {
     pub id: i32,
     pub checksum: Option<String>,

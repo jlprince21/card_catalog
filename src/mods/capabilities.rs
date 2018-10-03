@@ -5,6 +5,7 @@ use self::walkdir::{DirEntry, WalkDir};
 
 use diesel;
 use diesel::prelude::*;
+use diesel::sql_query;
 
 // file hashing
 use self::twox_hash::XxHash;
@@ -21,6 +22,12 @@ use mods::models as Models;
 use mods::sql as Sql;
 
 use Models::{NewListing, Listing};
+
+pub enum ChecksumState {
+    NotPresent,
+    PresentButNoChecksum,
+    PresentWithChecksum
+}
 
 pub fn delete_missing_listings(conn: &PgConnection) {
     use Schema::listings::dsl::*;
@@ -39,6 +46,19 @@ pub fn delete_missing_listings(conn: &PgConnection) {
                         .expect("Error deleting listing");
                 }
             }
+    }
+}
+
+pub fn find_duplicates(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
+    // TODO I hope to one day get this to work using solely diesel.
+    let results = sql_query(include_str!("duplicates.sql"))
+        .load::<Listing>(conn).unwrap();
+
+    println!("{:?} duplicate files found.", &results.len());
+
+    match results.len() {
+        0 => None,
+        _ => Some(results)
     }
 }
 
@@ -90,8 +110,7 @@ pub fn hash_file(file_name: &str) -> String {
     format!("{:x}", hash)
 }
 
-pub fn is_file_hashed(file_path_to_check: &str, conn: &PgConnection) -> bool {
-    // TODO 18-09-17 Query for checksum being empty/null instead of a simple count
+pub fn is_file_hashed(file_path_to_check: &str, conn: &PgConnection) -> (ChecksumState) {
     use Schema::listings::dsl::*;
 
     let results = listings
@@ -100,7 +119,13 @@ pub fn is_file_hashed(file_path_to_check: &str, conn: &PgConnection) -> bool {
         .load::<Listing>(conn)
         .expect("Error loading posts");
 
-    !results.is_empty()
+    if results.is_empty(){
+        ChecksumState::NotPresent
+    } else if results[0].checksum == None {
+        ChecksumState::PresentButNoChecksum
+    } else {
+        ChecksumState::PresentWithChecksum
+    }
 }
 
 pub fn start_hashing(root_directory: &str, conn: &PgConnection) {
@@ -111,18 +136,24 @@ pub fn start_hashing(root_directory: &str, conn: &PgConnection) {
         } else {
             let file_path = entry.path().display().to_string();
 
-            let is_hashed: bool = is_file_hashed(&Util::escape_sql_string(&file_path), &conn);
+            let is_hashed: ChecksumState = is_file_hashed(&Util::escape_sql_string(&file_path), &conn);
 
-            if is_hashed {
-                println!("skipping hash for {}", &file_path);
-            } else {
-                // TODO 18-09-22 Need to research diesel error checking and see if strings can be cleaned up
-                println!("hashing: {}", &file_path);
-                Sql::create_listing(&conn,
-                            &hash_file(&file_path),
-                            &Util::escape_sql_string(&entry.file_name().to_str().unwrap().to_string()),
-                            &Util::escape_sql_string(&entry.path().display().to_string()),
-                            &Util::get_file_len(&file_path));
+            match is_hashed {
+                ChecksumState::NotPresent =>
+                {
+                    // TODO 18-09-22 Need to research diesel error checking and see if strings can be cleaned up
+                    println!("hashing: {}", &file_path);
+                    Sql::create_listing(&conn,
+                                &hash_file(&file_path),
+                                &Util::escape_sql_string(&entry.file_name().to_str().unwrap().to_string()),
+                                &Util::escape_sql_string(&entry.path().display().to_string()),
+                                &Util::get_file_len(&file_path));
+                }
+                ChecksumState::PresentButNoChecksum =>
+                {
+                    // TODO 18-10-02 Update existing listing here
+                }
+                ChecksumState::PresentWithChecksum => {println!("skipping hash for {}", &file_path)}
             }
         }
     }
