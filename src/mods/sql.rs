@@ -22,3 +22,14 @@ pub fn create_listing(conn: &PgConnection, checksum: &str, file_name: &str, file
 pub fn establish_connection(connection: &str) -> PgConnection {
     PgConnection::establish(&connection).unwrap_or_else(|_| panic!("Error connecting to {}", connection))
 }
+
+pub fn update_hash(conn: &PgConnection, id: i32, hash: &str) {
+    use super::schema::listings::dsl::{listings, checksum};
+
+    println!("inside update hash: {} {:?}", id, hash);
+
+    diesel::update(listings.find(id))
+        .set(checksum.eq(hash))
+        .get_result::<Listing>(conn)
+        .unwrap_or_else(|_| panic!("Unable to find post {}", id));
+}
