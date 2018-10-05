@@ -142,7 +142,7 @@ pub fn start_hashing(root_directory: &str, conn: &PgConnection) {
             let is_hashed: (ChecksumState, Option<i32>) = is_file_hashed(&Util::escape_sql_string(&file_path), &conn);
 
             match is_hashed {
-                (ChecksumState::NotPresent, Some(_)) =>
+                (ChecksumState::NotPresent, None) =>
                 {
                     // TODO 18-09-22 Need to research diesel error checking and see if strings can be cleaned up
                     println!("hashing new file: {}", &file_path);
