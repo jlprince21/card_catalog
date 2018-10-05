@@ -49,19 +49,21 @@ pub fn delete_missing_listings(conn: &PgConnection) {
     }
 }
 
-// TODO 18-10-03: Had error in model setup; circle back to implement this properly
-// pub fn find_duplicates(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
-//     // TODO I hope to one day get this to work using solely diesel.
-//     let results = sql_query(include_str!("duplicates.sql"))
-//         .load::<Listing>(conn).unwrap();
+pub fn find_duplicates(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
+    let results = sql_query(include_str!("duplicates.sql"))
+                    .load::<Listing>(conn);
 
-//     println!("{:?} duplicate files found.", &results.len());
-
-//     match results.len() {
-//         0 => None,
-//         _ => Some(results)
-//     }
-// }
+    match results {
+        Err(_error) => {
+            println!("Something went wrong with duplicate detection.");
+            None
+        },
+        Ok(rows) => {
+            println!("{:?} duplicate files found.", &rows.len());
+            Some(rows)
+        }
+    }
+}
 
 pub fn find_missing(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
     use mods::schema::listings::dsl::*;
