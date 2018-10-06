@@ -1,5 +1,7 @@
 # File Scanner
 
+[![Build Status](https://travis-ci.org/jlprince21/file_scanner.svg?branch=master)](https://travis-ci.org/jlprince21/file_scanner)
+
 Written in Rust, this program collects file metadata and stores it in a PostgreSQL
 database. Some things it gathers include:
 
