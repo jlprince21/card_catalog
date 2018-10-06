@@ -31,6 +31,7 @@ pub enum ChecksumState {
 
 pub fn delete_missing_listings(conn: &PgConnection) {
     use Schema::listings::dsl::*;
+    println!("Scanning for missing files.");
 
     match find_missing(&conn) {
         None => println!("none missing"),
@@ -39,11 +40,7 @@ pub fn delete_missing_listings(conn: &PgConnection) {
                 println!("some missing");
                 for y in x {
                     println!("removing listing for missing file: {}", y.file_path);
-
-                    // 18-09-23 TODO: One day, may want to mark listings as deleted instead of removing them
-                    diesel::delete(listings.filter(file_path.eq(y.file_path)))
-                        .execute(conn)
-                        .expect("Error deleting listing");
+                    Sql::delete_listing(conn, &y.file_path)
                 }
             }
     }
@@ -116,11 +113,7 @@ pub fn hash_file(file_name: &str) -> String {
 pub fn is_file_hashed(file_path_to_check: &str, conn: &PgConnection) -> (ChecksumState, Option<i32>) {
     use Schema::listings::dsl::*;
 
-    let results = listings
-        .filter(file_path.eq(file_path_to_check))
-        .limit(1)
-        .load::<Listing>(conn)
-        .expect("Error loading posts");
+    let results = Sql::find_single_file(conn, file_path_to_check);
 
     if results.is_empty(){
         (ChecksumState::NotPresent, None)
