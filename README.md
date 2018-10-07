@@ -28,12 +28,40 @@ Next, set any remaining configuration values as detailed in *Configuration*.
 Once the prerequisites are met, you may run or build the project with:
 
 ```
+# To see help
+cargo run -- --help
+
 # To run
 cargo run
 
 # To build for release
 cargo build --release
 
+```
+
+See *Arguments* section for details on the arguments this program accepts.
+
+# Arguments
+
+This app takes a minimum of one command line argument before it will perform any
+action beyond simply terminating.
+
+Currently, you can specify one of several actions to use via the `-a` or `--action`
+flags followed by an action name. For now configuration beyond selecting an
+action to perform is handled in the `.env` file, see *Configuration*. Valid
+actions are:
+
+1. duplicates - finds duplicate files within database via **matching** hashes.
+2. hash - computes hashes, file size, etc and stores results in database.
+3. orphans - iterates *all* database entries computed by hash action and does
+a simple check to see if files are still present. If a file is not present, its
+entry in the database will be removed.
+
+Examples:
+
+```
+# Start hashing files:
+cargo run -- --action hash
 ```
 
 # Configuration
