@@ -63,7 +63,7 @@ pub fn find_duplicates(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
 }
 
 pub fn find_missing(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
-    use mods::schema::listings::dsl::*;
+    use Schema::listings::dsl::*;
 
     let results = listings
         .load::<Listing>(conn)
@@ -111,8 +111,6 @@ pub fn hash_file(file_name: &str) -> String {
 }
 
 pub fn is_file_hashed(file_path_to_check: &str, conn: &PgConnection) -> (ChecksumState, Option<i32>) {
-    use Schema::listings::dsl::*;
-
     let results = Sql::find_single_file(conn, file_path_to_check);
 
     if results.is_empty(){
@@ -155,4 +153,12 @@ pub fn start_hashing(root_directory: &str, conn: &PgConnection) {
             }
         }
     }
+}
+
+pub fn create_tag(conn: &PgConnection, tag: &str) {
+    Sql::create_tag(conn, tag);
+}
+
+pub fn create_listing_tag(conn: &PgConnection, listing_id: i32, tag_id: i32) {
+    Sql::create_listing_tag(conn, listing_id, tag_id);
 }

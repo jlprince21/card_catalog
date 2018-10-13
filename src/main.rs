@@ -7,13 +7,15 @@ extern crate config;
 #[macro_use]
 extern crate diesel;
 
-use clap::{Arg, App};
+use clap::{Arg, App, SubCommand};
+
+pub mod schema;
+use ::schema as Schema;
 
 pub mod mods;
 use mods::util as Util;
 use mods::models as Models;
 use mods::sql as Sql;
-use mods::schema as Schema;
 use mods::capabilities as Capabilities;
 
 fn main() {
@@ -27,11 +29,39 @@ fn main() {
                             .value_name("ACTION")
                             .help("Select which action you want the file scanner to perform")
                             .takes_value(true))
+                        .subcommand(
+                            SubCommand::with_name("tag")
+                                .arg(Arg::with_name("id").required(true).max_values(1))
+                                .arg(Arg::with_name("tags").last(true).required(true).min_values(1)),
+                        )
+                        .subcommand(
+                            SubCommand::with_name("newtag")
+                                .arg(Arg::with_name("tag").required(true).max_values(1))
+                        )
                         .get_matches();
 
     let settings: Util::Settings = Util::get_settings();
     let connection = Sql::establish_connection(&settings.pg_connection_string);
     let action = matches.value_of("action").unwrap_or("none");
+
+    if let Some(matches) = matches.subcommand_matches("newtag") {
+        let tag = matches.value_of("tag").unwrap_or("none");
+        println!("{}", tag);
+        Capabilities::create_tag(&connection, tag);
+        std::process::exit(0);
+    }
+
+    if let Some(matches) = matches.subcommand_matches("tag") {
+        let id = matches.value_of("id").unwrap_or("none");
+        println!("{}", id);
+
+        //  cargo run -- tag 123 -- a b c
+        let tags: Vec<_> = matches.values_of("tags").unwrap().collect();
+        println!("{}", tags[0]);
+        Capabilities::create_listing_tag(&connection, id.parse::<i32>().unwrap(), tags[0].parse::<i32>().unwrap());
+
+        std::process::exit(0);
+    }
 
     match action {
         "duplicates" => {
