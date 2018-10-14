@@ -162,3 +162,11 @@ pub fn create_tag(conn: &PgConnection, tag: &str) {
 pub fn create_listing_tag(conn: &PgConnection, listing_id: i32, tag_id: i32) {
     Sql::create_listing_tag(conn, listing_id, tag_id);
 }
+
+pub fn tag_listing(conn: &PgConnection, listing_id: i32, tag_name: &str) {
+    use Models::Tag;
+
+    // since tags and listing tags will be made if not existant, we can take advantage of the create SQL
+    let the_tag: Tag = Sql::create_tag(conn, tag_name);
+    Sql::create_listing_tag(conn, listing_id, the_tag.id);
+}

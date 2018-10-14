@@ -10,6 +10,10 @@ database. Some things it gathers include:
 3. Size
 4. XxHash checksum
 
+In addition to collecting data about files, the program assists in indexing files
+with tools such as file tagging, search, and more. Development on these features
+is underway... stay tuned!
+
 # Getting Started
 
 To run the project, you will need a PostgreSQL database setup and configure the
@@ -44,9 +48,13 @@ See *Arguments* section for details on the arguments this program accepts.
 # Arguments
 
 This app takes a minimum of one command line argument before it will perform any
-action beyond simply terminating.
+action beyond simply terminating. This section is divided into commands  subcommands.
 
-Currently, you can specify one of several actions to use via the `-a` or `--action`
+## Commands
+
+### Action
+
+You can specify one of several actions to use via the `-a` or `--action` command
 flags followed by an action name. For now configuration beyond selecting an
 action to perform is handled in the `.env` file, see *Configuration*. Valid
 actions are:
@@ -62,6 +70,21 @@ Examples:
 ```
 # Start hashing files:
 cargo run -- --action hash
+```
+
+## Subcommands
+
+### Tagging a Listing
+
+To aid in searching for any given file, you can apply tags to a listing ID which
+in the future will be used as a search mechanism. For example, you could search
+for all files containing the tag `vacation` and viola :violin:, all files with
+the tag applied are returned!
+
+To tag a listing, whose ID is _123_, with tags of `summer`, `beach`, and `vacation`:
+
+```
+cargo run -- tag 123 -- summer beach vacation
 ```
 
 # Configuration

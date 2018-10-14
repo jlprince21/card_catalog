@@ -1,6 +1,7 @@
 // suppress warnings for issue #50504 <https://github.com/rust-lang/rust/issues/50504>
 #![allow(proc_macro_derive_resolution_fallback)]
 
+#[macro_use]
 extern crate clap;
 extern crate config;
 
@@ -52,14 +53,15 @@ fn main() {
     }
 
     if let Some(matches) = matches.subcommand_matches("tag") {
-        let id = matches.value_of("id").unwrap_or("none");
-        println!("{}", id);
-
-        //  cargo run -- tag 123 -- a b c
+        //  Example: cargo run -- tag 123 -- summer beach vacation
+        let listing_id = value_t!(matches.value_of("id"), i32).unwrap_or_else(|e| e.exit()); // handy macro from clap
         let tags: Vec<_> = matches.values_of("tags").unwrap().collect();
-        println!("{}", tags[0]);
-        Capabilities::create_listing_tag(&connection, id.parse::<i32>().unwrap(), tags[0].parse::<i32>().unwrap());
 
+        for tag in tags {
+            Capabilities::tag_listing(&connection, listing_id, tag);
+        }
+
+        println!("Tag(s) applied successfully!");
         std::process::exit(0);
     }
 
