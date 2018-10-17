@@ -1,12 +1,15 @@
 use diesel;
 use diesel::prelude::*;
 
+use uuid::Uuid;
+
 use Models::{NewListing, Listing, NewTag, Tag, NewListingTag, ListingTag};
 
 pub fn create_listing(conn: &PgConnection, checksum: &str, file_name: &str, file_path: &str, file_size: &i64) -> Listing {
     use Schema::listings;
 
     let new_listing = NewListing {
+        id: &Uuid::new_v4().to_string(),
         checksum,
         file_name,
         file_path,
@@ -19,11 +22,12 @@ pub fn create_listing(conn: &PgConnection, checksum: &str, file_name: &str, file
         .expect("Error saving new listing")
 }
 
-pub fn create_listing_tag(conn: &PgConnection, p_listing_id: i32, p_tag_id: i32) -> ListingTag {
+pub fn create_listing_tag(conn: &PgConnection, p_listing_id: &str, p_tag_id: &str) -> ListingTag {
     use Schema::listing_tags;
     use Schema::listing_tags::dsl::*;
 
     let new_listing_tag = NewListingTag {
+        id: &Uuid::new_v4().to_string(),
         listing_id: &p_listing_id,
         tag_id: &p_tag_id
     };
@@ -55,6 +59,7 @@ pub fn create_tag(conn: &PgConnection, p_tag: &str) -> Tag {
     use Schema::tags::dsl::*;
 
     let new_tag = NewTag {
+        id: &Uuid::new_v4().to_string(),
         tag: p_tag
     };
 
@@ -101,7 +106,7 @@ pub fn find_single_file(conn: &PgConnection, p_file_path: &str) -> Vec<Listing> 
         .expect("Error loading posts")
 }
 
-pub fn update_hash(conn: &PgConnection, id: i32, hash: &str) {
+pub fn update_hash(conn: &PgConnection, id: &str, hash: &str) {
     use Schema::listings::dsl::{listings, checksum};
     diesel::update(listings.find(id))
         .set(checksum.eq(hash))

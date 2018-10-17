@@ -110,15 +110,15 @@ pub fn hash_file(file_name: &str) -> String {
     format!("{:x}", hash)
 }
 
-pub fn is_file_hashed(file_path_to_check: &str, conn: &PgConnection) -> (ChecksumState, Option<i32>) {
+pub fn is_file_hashed(file_path_to_check: &str, conn: &PgConnection) -> (ChecksumState, Option<String>) {
     let results = Sql::find_single_file(conn, file_path_to_check);
 
     if results.is_empty(){
         (ChecksumState::NotPresent, None)
     } else if results[0].checksum == None {
-        (ChecksumState::PresentButNoChecksum, Some(results[0].id))
+        (ChecksumState::PresentButNoChecksum, Some(results.into_iter().nth(0).expect("Could not get listing id").id))
     } else {
-        (ChecksumState::PresentWithChecksum, Some(results[0].id))
+        (ChecksumState::PresentWithChecksum, Some(results.into_iter().nth(0).expect("Could not get listing id").id))
     }
 }
 
@@ -130,7 +130,7 @@ pub fn start_hashing(root_directory: &str, conn: &PgConnection) {
         } else {
             let file_path = entry.path().display().to_string();
 
-            let is_hashed: (ChecksumState, Option<i32>) = is_file_hashed(&Util::escape_sql_string(&file_path), &conn);
+            let is_hashed: (ChecksumState, Option<String>) = is_file_hashed(&Util::escape_sql_string(&file_path), &conn);
 
             match is_hashed {
                 (ChecksumState::NotPresent, None) =>
@@ -146,7 +146,7 @@ pub fn start_hashing(root_directory: &str, conn: &PgConnection) {
                 (ChecksumState::PresentButNoChecksum, Some(x)) =>
                 {
                     println!("hashing previously logged: {}", &file_path);
-                    Sql::update_hash(&conn, x, &hash_file(&file_path));
+                    Sql::update_hash(&conn, &x, &hash_file(&file_path));
                 }
                 (ChecksumState::PresentWithChecksum, Some(_)) => {println!("skipping hash for: {}", &file_path)}
                 (_, _) => {}
@@ -159,14 +159,14 @@ pub fn create_tag(conn: &PgConnection, tag: &str) {
     Sql::create_tag(conn, tag);
 }
 
-pub fn create_listing_tag(conn: &PgConnection, listing_id: i32, tag_id: i32) {
+pub fn create_listing_tag(conn: &PgConnection, listing_id: &str, tag_id: &str) {
     Sql::create_listing_tag(conn, listing_id, tag_id);
 }
 
-pub fn tag_listing(conn: &PgConnection, listing_id: i32, tag_name: &str) {
+pub fn tag_listing(conn: &PgConnection, listing_id: &str, tag_name: &str) {
     use Models::Tag;
 
     // since tags and listing tags will be made if not existant, we can take advantage of the create SQL
     let the_tag: Tag = Sql::create_tag(conn, tag_name);
-    Sql::create_listing_tag(conn, listing_id, the_tag.id);
+    Sql::create_listing_tag(conn, listing_id, &the_tag.id);
 }

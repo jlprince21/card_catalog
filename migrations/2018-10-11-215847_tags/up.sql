@@ -1,4 +1,4 @@
 CREATE TABLE tags (
-    id SERIAL PRIMARY KEY,
+    id text PRIMARY KEY,
     tag text NOT NULL
 );

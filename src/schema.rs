@@ -1,14 +1,14 @@
 table! {
     listing_tags (id) {
-        id -> Int4,
-        listing_id -> Int4,
-        tag_id -> Int4,
+        id -> Text,
+        listing_id -> Text,
+        tag_id -> Text,
     }
 }
 
 table! {
     listings (id) {
-        id -> Int4,
+        id -> Text,
         checksum -> Nullable<Text>,
         file_name -> Text,
         file_path -> Text,
@@ -18,7 +18,7 @@ table! {
 
 table! {
     tags (id) {
-        id -> Int4,
+        id -> Text,
         tag -> Text,
     }
 }

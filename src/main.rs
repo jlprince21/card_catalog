@@ -8,6 +8,8 @@ extern crate config;
 #[macro_use]
 extern crate diesel;
 
+extern crate uuid;
+
 use clap::{Arg, App, SubCommand};
 
 pub mod schema;
@@ -54,11 +56,11 @@ fn main() {
 
     if let Some(matches) = matches.subcommand_matches("tag") {
         //  Example: cargo run -- tag 123 -- summer beach vacation
-        let listing_id = value_t!(matches.value_of("id"), i32).unwrap_or_else(|e| e.exit()); // handy macro from clap
+        let listing_id = value_t!(matches.value_of("id"), String).unwrap_or_else(|e| e.exit()); // handy macro from clap
         let tags: Vec<_> = matches.values_of("tags").unwrap().collect();
 
         for tag in tags {
-            Capabilities::tag_listing(&connection, listing_id, tag);
+            Capabilities::tag_listing(&connection, &listing_id, tag);
         }
 
         println!("Tag(s) applied successfully!");
