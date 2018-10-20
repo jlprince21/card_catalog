@@ -38,8 +38,16 @@ fn main() {
                                 .arg(Arg::with_name("tags").last(true).required(true).min_values(1)),
                         )
                         .subcommand(
-                            SubCommand::with_name("newtag")
+                            SubCommand::with_name("new-tag")
                                 .arg(Arg::with_name("tag").required(true).max_values(1))
+                        )
+                        .subcommand(
+                            SubCommand::with_name("delete-tag-listing")
+                                .arg(Arg::with_name("listing-id").required(true).max_values(1))
+                        )
+                        .subcommand(
+                            SubCommand::with_name("delete-tag")
+                                .arg(Arg::with_name("tag-id").required(true).max_values(1))
                         )
                         .get_matches();
 
@@ -47,10 +55,27 @@ fn main() {
     let connection = Sql::establish_connection(&settings.pg_connection_string);
     let action = matches.value_of("action").unwrap_or("none");
 
-    if let Some(matches) = matches.subcommand_matches("newtag") {
+    if let Some(matches) = matches.subcommand_matches("new-tag") {
+        // cargo run -- new-tag puppy
         let tag = matches.value_of("tag").unwrap_or("none");
-        println!("{}", tag);
+        println!(r#"Creating new tag "{}"."#, tag);
         Capabilities::create_tag(&connection, tag);
+        std::process::exit(0);
+    }
+
+    if let Some(matches) = matches.subcommand_matches("delete-tag-listing") {
+        // cargo run -- delete-tag-listing 56982fc3-091a-489c-bd6c-c7f916965d4b
+        let listing_id = matches.value_of("listing-id").unwrap_or("none");
+        println!("Deleting tag listing with id {}.", listing_id);
+        Capabilities::delete_listing_tag(&connection, listing_id);
+        std::process::exit(0);
+    }
+
+    if let Some(matches) = matches.subcommand_matches("delete-tag") {
+        // cargo run -- delete-tag 56982fc3-091a-489c-bd6c-c7f916965d4b
+        let tag_id = matches.value_of("tag-id").unwrap_or("none");
+        println!("Deleting tag with id {} and all associated listing_tags.", tag_id);
+        Capabilities::delete_tag(&connection, tag_id);
         std::process::exit(0);
     }
 

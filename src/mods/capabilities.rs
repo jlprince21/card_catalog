@@ -1,9 +1,8 @@
 extern crate twox_hash;
 extern crate walkdir;
 
-use self::walkdir::{DirEntry, WalkDir};
+use self::walkdir::{WalkDir};
 
-use diesel;
 use diesel::prelude::*;
 use diesel::sql_query;
 
@@ -21,7 +20,7 @@ use mods::util as Util;
 use mods::models as Models;
 use mods::sql as Sql;
 
-use Models::{NewListing, Listing};
+use Models::{Listing};
 
 pub enum ChecksumState {
     NotPresent,
@@ -29,8 +28,11 @@ pub enum ChecksumState {
     PresentWithChecksum
 }
 
+pub fn delete_listing_tag(conn: &PgConnection, listing_tag_id: &str) {
+    Sql::delete_listing_tag(conn, listing_tag_id);
+}
+
 pub fn delete_missing_listings(conn: &PgConnection) {
-    use Schema::listings::dsl::*;
     println!("Scanning for missing files.");
 
     match find_missing(&conn) {
@@ -44,6 +46,10 @@ pub fn delete_missing_listings(conn: &PgConnection) {
                 }
             }
     }
+}
+
+pub fn delete_tag(conn: &PgConnection, tag_id: &str) {
+    Sql::delete_tag(conn, tag_id);
 }
 
 pub fn find_duplicates(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
