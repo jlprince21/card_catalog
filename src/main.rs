@@ -43,7 +43,7 @@ fn main() {
                         )
                         .subcommand(
                             SubCommand::with_name("delete-tag-listing")
-                                .arg(Arg::with_name("listing-id").required(true).max_values(1))
+                                .arg(Arg::with_name("listing-tag-id").required(true).max_values(1))
                         )
                         .subcommand(
                             SubCommand::with_name("delete-tag")
@@ -65,9 +65,9 @@ fn main() {
 
     if let Some(matches) = matches.subcommand_matches("delete-tag-listing") {
         // cargo run -- delete-tag-listing 56982fc3-091a-489c-bd6c-c7f916965d4b
-        let listing_id = matches.value_of("listing-id").unwrap_or("none");
-        println!("Deleting tag listing with id {}.", listing_id);
-        Capabilities::delete_listing_tag(&connection, listing_id);
+        let listing_tag_id = matches.value_of("listing-tag-id").unwrap_or("none");
+        println!("Deleting tag listing with id {}.", listing_tag_id);
+        Capabilities::delete_listing_tag(&connection, listing_tag_id);
         std::process::exit(0);
     }
 

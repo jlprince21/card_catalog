@@ -74,17 +74,46 @@ cargo run -- --action hash
 
 ## Subcommands
 
+### Creating a Tag
+
+To create a tag without applying it to a listing, eg "puppy" use
+
+```
+cargo run -- new-tag puppy
+```
+
 ### Tagging a Listing
 
-To aid in searching for any given file, you can apply tags to a listing ID which
+To aid in searching for any given file, you can apply tags to a listing id which
 in the future will be used as a search mechanism. For example, you could search
 for all files containing the tag `vacation` and viola :violin:, all files with
 the tag applied are returned!
 
-To tag a listing, whose ID is _123_, with tags of `summer`, `beach`, and `vacation`:
+To tag a listing, whose id is _56982fc3-091a-489c-bd6c-c7f916965d4b_, with tags
+of `summer`, `beach`, and `vacation`:
 
 ```
-cargo run -- tag 123 -- summer beach vacation
+cargo run -- tag 56982fc3-091a-489c-bd6c-c7f916965d4b -- summer beach vacation
+```
+
+### Removing a Tag from a Listing
+
+To remove a single tag applied to a listing, use the UUID in the id column of
+`listing_tags` to remove the applied tag association.
+
+```
+cargo run -- delete-tag-listing 56982fc3-091a-489c-bd6c-c7f916965d4b
+```
+
+### Deleting a Tag
+
+Deleting a tag will remove it from the `tags` table and all entries of where the
+tag was in use on the `listing_tags` table. Proceed with caution! To make this a
+little harder to accidentally run, for now tags must be deleted with their UUID
+in the id column within the `tags` table.
+
+```
+cargo run -- delete-tag 56982fc3-091a-489c-bd6c-c7f916965d4b
 ```
 
 # Configuration

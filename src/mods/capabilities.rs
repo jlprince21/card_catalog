@@ -53,7 +53,7 @@ pub fn delete_tag(conn: &PgConnection, tag_id: &str) {
 }
 
 pub fn find_duplicates(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
-    let results = sql_query(include_str!("duplicates.sql"))
+    let results = sql_query(include_str!("queries/duplicates.sql"))
                     .load::<Listing>(conn);
 
     match results {
@@ -63,6 +63,24 @@ pub fn find_duplicates(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
         },
         Ok(rows) => {
             println!("{:?} duplicate files found.", &rows.len());
+            Some(rows)
+        }
+    }
+}
+
+pub fn find_tagged_listings(conn: &PgConnection) -> Option<Vec<Models::AppliedTag>> {
+    use Models::{AppliedTag};
+
+    let results = sql_query(include_str!("queries/applied_tags.sql"))
+                    .load::<AppliedTag>(conn);
+
+    match results {
+        Err(_error) => {
+            println!("Something went wrong with finding applied tags.");
+            None
+        },
+        Ok(rows) => {
+            println!("{:?} listings with applied tags found.", &rows.len());
             Some(rows)
         }
     }

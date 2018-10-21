@@ -5,6 +5,8 @@ use Schema::listings;
 use Schema::listing_tags;
 use Schema::tags;
 
+use diesel::sql_types::{Text, Nullable, BigInt};
+
 #[derive(Queryable, QueryableByName)]
 #[table_name="listings"]
 pub struct Listing {
@@ -53,4 +55,25 @@ pub struct NewListingTag<'a> {
     pub id: &'a str,
     pub listing_id: &'a str,
     pub tag_id: &'a str,
+}
+
+// TODO 18-10-21 This could be a view instead; see https://stackoverflow.com/a/51896910
+#[derive(QueryableByName)]
+pub struct AppliedTag {
+    #[sql_type = "Text"]
+    pub listing_id: String,
+    #[sql_type = "Nullable<Text>"]
+    pub checksum: Option<String>,
+    #[sql_type = "Text"]
+    pub file_name: String,
+    #[sql_type = "Text"]
+    pub file_path: String,
+    #[sql_type = "BigInt"]
+    pub file_size: i64,
+    #[sql_type = "Text"]
+    pub listing_tags_id: String,
+    #[sql_type = "Text"]
+    pub tags_id: String,
+    #[sql_type = "Text"]
+    pub tag: String
 }

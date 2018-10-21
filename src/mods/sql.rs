@@ -130,7 +130,7 @@ pub fn find_single_file(conn: &PgConnection, p_file_path: &str) -> Vec<Listing> 
         .filter(file_path.eq(p_file_path))
         .limit(1)
         .load::<Listing>(conn)
-        .expect("Error loading posts")
+        .expect("Error loading listing")
 }
 
 pub fn update_hash(conn: &PgConnection, id: &str, hash: &str) {
@@ -138,5 +138,5 @@ pub fn update_hash(conn: &PgConnection, id: &str, hash: &str) {
     diesel::update(listings.find(id))
         .set(checksum.eq(hash))
         .get_result::<Listing>(conn)
-        .unwrap_or_else(|_| panic!("Unable to find post {}", id));
+        .unwrap_or_else(|_| panic!("Unable to find listing with id {}", id));
 }
