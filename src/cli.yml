@@ -1,0 +1,43 @@
+name: File Scanner
+version: "0.0.1"
+author: Luke Prince github.com/jlprince21
+about: Assists in indexing a collection of files.
+args:
+  - action:
+      short: a
+      long: action
+      value_name: ACTION
+      help: Select which action you want the file scanner to perform.
+      possible_values:
+        - duplicates
+        - hash
+        - orphans
+subcommands:
+  - delete-tag:
+      about: Deletes a tag and all applications of it.
+      args:
+        - tag-id:
+            max_values: 1
+            required: true
+  - delete-tag-listing:
+      about: Removes a single applied tag from a listing.
+      args:
+        - listing-tag-id:
+            max_values: 1
+            required: true
+  - new-tag:
+      about: Creates a new tag without applying to a listing.
+      args:
+        - tag:
+            max_values: 1
+            required: true
+  - tag:
+      about: Tags a listing with one or more tags.
+      args:
+        - id:
+            max_values: 1
+            required: true
+        - tags:
+            last: true
+            min_values: 1
+            required: true

@@ -22,34 +22,8 @@ use mods::sql as Sql;
 use mods::capabilities as Capabilities;
 
 fn main() {
-    let matches = App::new("File Scanner")
-                        .version("0.0.1")
-                        .author("Luke Prince github.com/jlprince21")
-                        .about("Assists in indexing a collection of files")
-                        .arg(Arg::with_name("action")
-                            .short("a")
-                            .long("action")
-                            .value_name("ACTION")
-                            .help("Select which action you want the file scanner to perform")
-                            .takes_value(true))
-                        .subcommand(
-                            SubCommand::with_name("tag")
-                                .arg(Arg::with_name("id").required(true).max_values(1))
-                                .arg(Arg::with_name("tags").last(true).required(true).min_values(1)),
-                        )
-                        .subcommand(
-                            SubCommand::with_name("new-tag")
-                                .arg(Arg::with_name("tag").required(true).max_values(1))
-                        )
-                        .subcommand(
-                            SubCommand::with_name("delete-tag-listing")
-                                .arg(Arg::with_name("listing-tag-id").required(true).max_values(1))
-                        )
-                        .subcommand(
-                            SubCommand::with_name("delete-tag")
-                                .arg(Arg::with_name("tag-id").required(true).max_values(1))
-                        )
-                        .get_matches();
+    let yaml = load_yaml!("cli.yml");
+    let matches = App::from_yaml(yaml).get_matches();
 
     let settings: Util::Settings = Util::get_settings();
     let connection = Sql::establish_connection(&settings.pg_connection_string);
