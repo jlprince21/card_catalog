@@ -125,4 +125,4 @@ cargo run -- delete-tag 56982fc3-091a-489c-bd6c-c7f916965d4b
 
 # License
 
-License is MIT. See LICENSE.
+License is MIT. See LICENSE file.
