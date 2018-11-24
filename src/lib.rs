@@ -23,6 +23,12 @@ use mods::models as Models;
 use mods::sql as Sql;
 use mods::capabilities as Capabilities;
 
+pub mod test {
+    pub fn hello_world() {
+        println!("Hello World!");
+    }
+}
+
 fn main() {
     let yaml = load_yaml!("cli.yml");
     let matches = App::from_yaml(yaml).get_matches();
