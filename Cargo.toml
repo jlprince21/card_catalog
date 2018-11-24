@@ -5,6 +5,8 @@ authors = ["Luke Prince <luke@theprinces.org>"]
 exclude = [
     "documentation/*"
 ]
+description = "Assists in collecting file metadata for later organization."
+license = "MIT"
 readme = "README.md"
 
 [dependencies]
