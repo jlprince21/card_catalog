@@ -1,4 +1,4 @@
-# File Scanner
+# Card Catalog
 
 [![Build Status](https://travis-ci.org/jlprince21/file_scanner.svg?branch=master)](https://travis-ci.org/jlprince21/file_scanner)
 
