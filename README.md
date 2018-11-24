@@ -1,6 +1,6 @@
 # Card Catalog
 
-[![Build Status](https://travis-ci.org/jlprince21/file_scanner.svg?branch=master)](https://travis-ci.org/jlprince21/file_scanner)
+[![Build Status](https://travis-ci.org/jlprince21/card_catalog.svg?branch=master)](https://travis-ci.org/jlprince21/card_catalog)
 
 Written in Rust, this program collects file metadata and stores it in a PostgreSQL
 database. Some things it gathers include:
