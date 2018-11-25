@@ -23,11 +23,28 @@ use mods::models as Models;
 use mods::sql as Sql;
 use mods::capabilities as Capabilities;
 
-pub mod test {
+pub mod card_catalog {
+    use Capabilities;
+    use Sql;
+    use Util;
+
     pub fn hello_world() {
         println!("Hello World!");
     }
+
+    pub fn duplicates() {
+        let settings: Util::Settings = Util::get_settings();
+        let connection = Sql::establish_connection(&settings.pg_connection_string);
+
+        println!("Searching for duplicate files...");
+        Capabilities::find_duplicates(&connection);
+    }
 }
+
+// fn main() {
+//     use test;
+//     test::duplicates();
+// }
 
 fn main() {
     let yaml = load_yaml!("cli.yml");
