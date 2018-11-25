@@ -1,6 +1,6 @@
 [package]
 name = "card_catalog"
-version = "1.0.3"
+version = "1.0.4"
 authors = ["Luke Prince <luke@theprinces.org>"]
 exclude = [
     "documentation/*"

@@ -23,7 +23,7 @@ use mods::models as Models;
 use mods::sql as Sql;
 use mods::capabilities as Capabilities;
 
-pub mod card_catalog {
+pub mod cc {
     use Capabilities;
     use Sql;
     use Util;
