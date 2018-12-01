@@ -1,6 +1,6 @@
 [package]
 name = "card_catalog"
-version = "1.0.5"
+version = "1.0.6"
 authors = ["Luke Prince <luke@theprinces.org>"]
 exclude = [
     "documentation/*"
@@ -16,7 +16,7 @@ repository = "https://github.com/jlprince21/card_catalog"
 travis-ci = { repository = "jlprince21/card_catalog" }
 
 [lib]
-name = "cclib"
+name = "card_catalog"
 path = "src/lib.rs"
 
 [[bin]]

@@ -27,12 +27,20 @@ pub mod cc {
     use Capabilities;
     use Sql;
     use Util;
+    use diesel::{PgConnection};
+
+    fn get_connection() -> PgConnection {
+        let settings: Util::Settings = Util::get_settings();
+        Sql::establish_connection(&settings.pg_connection_string)
+    }
 
     pub fn duplicates() {
-        let settings: Util::Settings = Util::get_settings();
-        let connection = Sql::establish_connection(&settings.pg_connection_string);
-
         println!("Searching for duplicate files...");
-        Capabilities::find_duplicates(&connection);
+        Capabilities::find_duplicates(&get_connection());
+    }
+
+    pub fn hash(root_directory: &str) {
+        println!("Hashing...");
+        Capabilities::start_hashing(&root_directory, &get_connection());
     }
 }

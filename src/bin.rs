@@ -23,8 +23,8 @@ use mods::models as Models;
 use mods::sql as Sql;
 use mods::capabilities as Capabilities;
 
-extern crate cclib;
-use cclib::cc;
+extern crate card_catalog;
+use card_catalog::cc;
 
 fn main() {
     let yaml = load_yaml!("cli.yml");
@@ -76,8 +76,7 @@ fn main() {
             cc::duplicates();
         },
         "hash" => {
-            println!("Hashing...");
-            Capabilities::start_hashing(&settings.directory_to_scan, &connection);
+            cc::hash(&settings.directory_to_scan);
         },
         "orphans" => {
             println!("Removing orphans from database...");
