@@ -1,13 +1,27 @@
 [package]
 name = "card_catalog"
-version = "1.0.4"
+version = "1.0.5"
 authors = ["Luke Prince <luke@theprinces.org>"]
 exclude = [
     "documentation/*"
 ]
+categories = ["filesystem"]
 description = "Assists in collecting file metadata for later organization."
+keywords = ["files", "filesystem", "organization"]
 license = "MIT"
 readme = "README.md"
+repository = "https://github.com/jlprince21/card_catalog"
+
+[badges]
+travis-ci = { repository = "jlprince21/card_catalog" }
+
+[lib]
+name = "cclib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "ccbin"
+path = "src/bin.rs"
 
 [dependencies]
 clap = { version = "2.32.0", features = ["yaml"]}
