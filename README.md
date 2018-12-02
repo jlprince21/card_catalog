@@ -45,6 +45,13 @@ cargo build --release
 
 See *Arguments* section for details on the arguments this program accepts.
 
+Note: if running on Ubuntu, you may need to install libpq-dev in order for Diesel
+to compile when cargo builds.
+
+```
+sudo apt install libpq-dev
+```
+
 # Arguments
 
 This app takes a minimum of one command line argument before it will perform any
