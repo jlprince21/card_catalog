@@ -79,8 +79,7 @@ fn main() {
             cc::hash(&settings.directory_to_scan);
         },
         "orphans" => {
-            println!("Removing orphans from database...");
-            Capabilities::delete_missing_listings(&connection);
+            cc::orphans();
         }
         _ => {
             println!("No valid args provided, exiting.");

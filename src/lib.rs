@@ -43,4 +43,9 @@ pub mod cc {
         println!("Hashing...");
         Capabilities::start_hashing(&root_directory, &get_connection());
     }
+
+    pub fn orphans() {
+        println!("Removing orphans from database...");
+        Capabilities::delete_missing_listings(&get_connection());
+    }
 }
