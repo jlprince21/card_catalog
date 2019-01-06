@@ -56,4 +56,16 @@ pub mod cc {
         println!("Tag(s) applied successfully!");
         std::process::exit(0);
     }
+
+    pub fn delete_tag(tag_id: &str) {
+        Capabilities::delete_tag(&get_connection(), tag_id);
+    }
+
+    pub fn new_tag(tag: &str) {
+        Capabilities::create_tag(&get_connection(), tag);
+    }
+
+    pub fn delete_tag_listing(listing_tag_id: &str) {
+        Capabilities::delete_listing_tag(&get_connection(), listing_tag_id);
+    }
 }

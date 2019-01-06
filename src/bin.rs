@@ -1,8 +1,6 @@
 // suppress warnings for issue #50504 <https://github.com/rust-lang/rust/issues/50504>
 #![allow(proc_macro_derive_resolution_fallback)]
 
-// #![crate_type = "lib"]
-
 #[macro_use]
 extern crate clap;
 extern crate config;
@@ -38,7 +36,7 @@ fn main() {
         // cargo run -- new-tag puppy
         let tag = matches.value_of("tag").unwrap_or("none");
         println!(r#"Creating new tag "{}"."#, tag);
-        Capabilities::create_tag(&connection, tag);
+        cc::new_tag(tag);
         std::process::exit(0);
     }
 
@@ -46,7 +44,7 @@ fn main() {
         // cargo run -- delete-tag-listing 56982fc3-091a-489c-bd6c-c7f916965d4b
         let listing_tag_id = matches.value_of("listing-tag-id").unwrap_or("none");
         println!("Deleting tag listing with id {}.", listing_tag_id);
-        Capabilities::delete_listing_tag(&connection, listing_tag_id);
+        cc::delete_tag_listing(listing_tag_id);
         std::process::exit(0);
     }
 
@@ -54,7 +52,7 @@ fn main() {
         // cargo run -- delete-tag 56982fc3-091a-489c-bd6c-c7f916965d4b
         let tag_id = matches.value_of("tag-id").unwrap_or("none");
         println!("Deleting tag with id {} and all associated listing_tags.", tag_id);
-        Capabilities::delete_tag(&connection, tag_id);
+        cc::delete_tag(tag_id);
         std::process::exit(0);
     }
 
