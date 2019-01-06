@@ -59,14 +59,10 @@ fn main() {
     }
 
     if let Some(matches) = matches.subcommand_matches("tag") {
-        //  Example: cargo run -- tag 123 -- summer beach vacation
+        //  Example: cargo run -- tag cf80775e-3c25-4c3d-87f6-290357359bb8 -- summer beach vacation
         let listing_id = value_t!(matches.value_of("id"), String).unwrap_or_else(|e| e.exit()); // handy macro from clap
         let tags: Vec<_> = matches.values_of("tags").unwrap().collect();
-
-        for tag in tags {
-            Capabilities::tag_listing(&connection, &listing_id, tag);
-        }
-
+        cc::tag(&listing_id, tags);
         println!("Tag(s) applied successfully!");
         std::process::exit(0);
     }

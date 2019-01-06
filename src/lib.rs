@@ -48,4 +48,12 @@ pub mod cc {
         println!("Removing orphans from database...");
         Capabilities::delete_missing_listings(&get_connection());
     }
+
+    pub fn tag(listing_id: &str, tags: Vec<&str>) {
+        for tag in tags {
+            Capabilities::tag_listing(&get_connection(), &listing_id, tag);
+        }
+        println!("Tag(s) applied successfully!");
+        std::process::exit(0);
+    }
 }
