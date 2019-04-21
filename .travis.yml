@@ -10,7 +10,7 @@ matrix:
   fast_finish: true
 
 before_script:
-  - rustup component add clippy-preview
+  - rustup component add clippy
 script:
   - cargo clippy
   - cargo test

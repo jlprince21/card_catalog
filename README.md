@@ -130,6 +130,11 @@ cargo run -- delete-tag 56982fc3-091a-489c-bd6c-c7f916965d4b
 1. DATABASE_URL - PostgreSQL connection string.
 2. DIRECTORY_TO_SCAN - root directory location to start scanning files from.
 
+# More
+
+See `documentation` folder for more information including how to host a PostgreSQL
+database setup with pgAdmin compatible with this project.
+
 # License
 
 License is MIT. See LICENSE file.
