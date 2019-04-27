@@ -29,7 +29,6 @@ fn main() {
     let matches = App::from_yaml(yaml).get_matches();
 
     let settings: Util::Settings = Util::get_settings();
-    let connection = Sql::establish_connection(&settings.pg_connection_string);
     let action = matches.value_of("action").unwrap_or("none");
 
     if let Some(matches) = matches.subcommand_matches("new-tag") {
