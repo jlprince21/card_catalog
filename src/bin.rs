@@ -8,6 +8,8 @@ extern crate config;
 #[macro_use]
 extern crate diesel;
 
+extern crate rusqlite;
+extern crate time;
 extern crate uuid;
 
 use clap::{Arg, App, SubCommand};
@@ -18,8 +20,6 @@ use ::schema as Schema;
 pub mod mods;
 use mods::util as Util;
 use mods::models as Models;
-use mods::sql as Sql;
-use mods::capabilities as Capabilities;
 
 extern crate card_catalog;
 use card_catalog::cc;

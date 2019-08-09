@@ -7,6 +7,8 @@ use Schema::tags;
 
 use diesel::sql_types::{Text, Nullable, BigInt};
 
+use time::Timespec;
+
 #[derive(Queryable, QueryableByName)]
 #[table_name="listings"]
 pub struct Listing {
@@ -76,4 +78,16 @@ pub struct AppliedTag {
     pub tags_id: String,
     #[sql_type = "Text"]
     pub tag: String
+}
+
+// TODO 19-08-08 models below this line will need renaming as old models above are replaced
+
+#[derive(Debug)]
+pub struct ListingTwo {
+    pub id: String,
+    pub checksum: Option<String>,
+    pub time_created: Timespec,
+    pub file_name: String,
+    pub file_path: String,
+    pub file_size: i64
 }

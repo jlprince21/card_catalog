@@ -7,7 +7,7 @@ use self::walkdir::{DirEntry};
 
 pub struct Settings {
     pub directory_to_scan: String,
-    pub pg_connection_string: String
+    pub sqlite_connection_string: String,
 }
 
 pub fn does_file_exist(file_path: &str) -> bool {
@@ -29,7 +29,7 @@ pub fn get_settings() -> Settings {
 
     Settings {
         directory_to_scan: env::var("DIRECTORY_TO_SCAN").expect("DIRECTORY_TO_SCAN must be set"),
-        pg_connection_string: env::var("DATABASE_URL").expect("DATABASE_URL must be set")
+        sqlite_connection_string: env::var("SQLITE_CONNECTION").expect("SQLITE_CONNECTION must be set")
     }
 }
 

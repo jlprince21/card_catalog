@@ -22,6 +22,8 @@ use mods::sql as Sql;
 
 use Models::{Listing};
 
+// use rusqlite::{Connection, Result, NO_PARAMS};
+
 pub enum ChecksumState {
     NotPresent,
     PresentButNoChecksum,
@@ -134,7 +136,7 @@ pub fn hash_file(file_name: &str) -> String {
     format!("{:x}", hash)
 }
 
-pub fn is_file_hashed(file_path_to_check: &str, conn: &PgConnection) -> (ChecksumState, Option<String>) {
+pub fn is_file_hashed(file_path_to_check: &str, conn: &rusqlite::Connection) -> (ChecksumState, Option<String>) {
     let results = Sql::find_single_file(conn, file_path_to_check);
 
     if results.is_empty(){
@@ -146,7 +148,7 @@ pub fn is_file_hashed(file_path_to_check: &str, conn: &PgConnection) -> (Checksu
     }
 }
 
-pub fn start_hashing(root_directory: &str, conn: &PgConnection) {
+pub fn start_hashing(root_directory: &str, conn: &rusqlite::Connection) {
     let walker = WalkDir::new(root_directory).into_iter();
     for entry in walker.filter_map(|e| e.ok()) {
         if Util::is_dir(&entry) {
@@ -161,11 +163,15 @@ pub fn start_hashing(root_directory: &str, conn: &PgConnection) {
                 {
                     // TODO 18-09-22 Need to research diesel error checking and see if strings can be cleaned up
                     println!("hashing new file: {}", &file_path);
-                    Sql::create_listing(&conn,
+                    match Sql::create_listing(
+                                &conn,
                                 &hash_file(&file_path),
                                 &Util::escape_sql_string(&entry.file_name().to_str().unwrap().to_string()),
                                 &Util::escape_sql_string(&entry.path().display().to_string()),
-                                &Util::get_file_len(&file_path));
+                                &Util::get_file_len(&file_path)) {
+                                    Ok(_x) => (),
+                                    Err(_error) => panic!("Insert failed"),
+                                };
                 }
                 (ChecksumState::PresentButNoChecksum, Some(x)) =>
                 {

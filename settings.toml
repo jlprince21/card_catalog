@@ -1,6 +1,0 @@
-DirectoryToScan = "XXX"
-SQLDatabase = "XXX"
-SQLPassword = "XXX"
-SQLPort = "3306"
-SQLServer = "localhost"
-SQLUser = "user"

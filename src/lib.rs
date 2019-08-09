@@ -10,9 +10,9 @@ extern crate config;
 #[macro_use]
 extern crate diesel;
 
+extern crate rusqlite;
+extern crate time;
 extern crate uuid;
-
-use clap::{Arg, App, SubCommand};
 
 pub mod schema;
 use ::schema as Schema;
@@ -27,16 +27,16 @@ pub mod cc {
     use Capabilities;
     use Sql;
     use Util;
-    use diesel::{PgConnection};
+    use rusqlite::{Connection};
 
-    fn get_connection() -> PgConnection {
+    fn get_connection() -> Connection {
         let settings: Util::Settings = Util::get_settings();
-        Sql::establish_connection(&settings.pg_connection_string)
+        Sql::establish_connection(&settings.sqlite_connection_string)
     }
 
     pub fn duplicates() {
         println!("Searching for duplicate files...");
-        Capabilities::find_duplicates(&get_connection());
+        // Capabilities::find_duplicates(&get_connection());
     }
 
     pub fn hash(root_directory: &str) {
@@ -46,26 +46,26 @@ pub mod cc {
 
     pub fn orphans() {
         println!("Removing orphans from database...");
-        Capabilities::delete_missing_listings(&get_connection());
+        // Capabilities::delete_missing_listings(&get_connection());
     }
 
     pub fn tag(listing_id: &str, tags: Vec<&str>) {
-        for tag in tags {
-            Capabilities::tag_listing(&get_connection(), &listing_id, tag);
-        }
+        // for tag in tags {
+        //     Capabilities::tag_listing(&get_connection(), &listing_id, tag);
+        // }
         println!("Tag(s) applied successfully!");
         std::process::exit(0);
     }
 
     pub fn delete_tag(tag_id: &str) {
-        Capabilities::delete_tag(&get_connection(), tag_id);
+        // Capabilities::delete_tag(&get_connection(), tag_id);
     }
 
     pub fn new_tag(tag: &str) {
-        Capabilities::create_tag(&get_connection(), tag);
+        // Capabilities::create_tag(&get_connection(), tag);
     }
 
     pub fn delete_tag_listing(listing_tag_id: &str) {
-        Capabilities::delete_listing_tag(&get_connection(), listing_tag_id);
+        // Capabilities::delete_listing_tag(&get_connection(), listing_tag_id);
     }
 }

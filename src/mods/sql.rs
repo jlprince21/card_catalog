@@ -3,23 +3,38 @@ use diesel::prelude::*;
 
 use uuid::Uuid;
 
-use Models::{NewListing, Listing, NewTag, Tag, NewListingTag, ListingTag};
+extern crate rusqlite;
 
-pub fn create_listing(conn: &PgConnection, checksum: &str, file_name: &str, file_path: &str, file_size: &i64) -> Listing {
-    use Schema::listings;
+use rusqlite::types::ToSql;
+use rusqlite::{Connection, Result, NO_PARAMS, params};
 
-    let new_listing = NewListing {
-        id: &Uuid::new_v4().to_string(),
-        checksum,
-        file_name,
-        file_path,
-        file_size,
+use Models::{NewTag, Tag, NewListingTag, ListingTag, ListingTwo};
+
+pub fn create_listing(conn: &rusqlite::Connection, checksum: &str, file_name: &str, file_path: &str, file_size: &i64) -> Result<()> {
+
+    // TODO 19-08-08 the checksum here may need to have an alteration in event of being empty; not sure if this code is safe
+    let new_listing = ListingTwo {
+        id: Uuid::new_v4().to_string(),
+        checksum: Some(checksum.to_string()),
+        time_created: time::get_time(),
+        file_name: file_name.to_string(),
+        file_path: file_path.to_string(),
+        file_size: *file_size
     };
 
-    diesel::insert_into(listings::table)
-        .values(&new_listing)
-        .get_result(conn)
-        .expect("Error saving new listing")
+    conn.execute(
+        "INSERT INTO listing
+                (id, checksum, time_created, file_name, file_path, file_size)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        &[&new_listing.id as &ToSql,
+            &new_listing.checksum as &ToSql,
+            &new_listing.time_created,
+            &new_listing.file_name as &ToSql,
+            &new_listing.file_path as &ToSql,
+            &new_listing.file_size as &ToSql],
+    )?;
+
+    Ok(())
 }
 
 pub fn create_listing_tag(conn: &PgConnection, p_listing_id: &str, p_tag_id: &str) -> ListingTag {
@@ -120,23 +135,51 @@ pub fn delete_tag(conn: &PgConnection, p_tag_id: &str) {
     }
 }
 
-pub fn establish_connection(connection: &str) -> PgConnection {
-    PgConnection::establish(&connection).unwrap_or_else(|_| panic!("Error connecting to {}", connection))
+pub fn establish_connection(connection: &str) -> rusqlite::Connection {
+    rusqlite::Connection::open(&connection).unwrap_or_else(|_| panic!("Error connecting to {}", connection))
 }
 
-pub fn find_single_file(conn: &PgConnection, p_file_path: &str) -> Vec<Listing> {
-    use Schema::listings::dsl::*;
-    listings
-        .filter(file_path.eq(p_file_path))
-        .limit(1)
-        .load::<Listing>(conn)
-        .expect("Error loading listing")
+pub fn find_single_file(conn: &rusqlite::Connection, p_file_path: &str) -> Vec<ListingTwo> {
+    let mut stmt = match conn
+        .prepare(&format!("SELECT id, checksum, time_created, file_name, file_path, file_size FROM listing where file_path='{}'", &p_file_path))
+        {
+            Ok(x) => {x},
+            Err(_error)=> { panic!("Error connecting to database when checking if file hashed")},
+        };
+
+    let listing_iter = match stmt
+        .query_map(NO_PARAMS, |row| Ok(ListingTwo {
+            id: row.get(0)?,
+            checksum: row.get(1)?,
+            time_created: row.get(2)?,
+            file_name: row.get(3)?,
+            file_path: row.get(4)?,
+            file_size: row.get(5)?
+        })) {
+            Ok(x) => {
+                x
+            },
+            Err(_error) => {
+                panic!("Failed to load results from query")
+            },
+        };
+
+    // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
+    let mut single_listing: Vec<ListingTwo> = Vec::new();
+
+    for listing in listing_iter {
+        single_listing.insert(0, listing.unwrap());
+    }
+
+    single_listing
 }
 
-pub fn update_hash(conn: &PgConnection, id: &str, hash: &str) {
-    use Schema::listings::dsl::{listings, checksum};
-    diesel::update(listings.find(id))
-        .set(checksum.eq(hash))
-        .get_result::<Listing>(conn)
-        .unwrap_or_else(|_| panic!("Unable to find listing with id {}", id));
+pub fn update_hash(conn: &rusqlite::Connection, id: &str, hash: &str) {
+    let query = format!("UPDATE listing SET checksum = '{}' WHERE id = '{}'", &hash, &id).to_string();
+
+    match conn.execute(&query, NO_PARAMS) {
+        Ok(updated) => println!("updated hash for {} row with id {}", updated, id),
+        Err(_err) => panic!("Unable to find listing with id {}", id),
+    }
+
 }
