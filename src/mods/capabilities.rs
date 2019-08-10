@@ -20,7 +20,7 @@ use mods::util as Util;
 use mods::models as Models;
 use mods::sql as Sql;
 
-use Models::{Listing, ListingTwo};
+use Models::{Listing, ListingTwo, AppliedTagTwo};
 
 use rusqlite::{Connection, Result, NO_PARAMS};
 
@@ -136,20 +136,67 @@ WHERE
     }
 }
 
-pub fn find_tagged_listings(conn: &PgConnection) -> Option<Vec<Models::AppliedTag>> {
-    use Models::{AppliedTag};
+pub fn find_tagged_listings(conn: &rusqlite::Connection) -> Option<Vec<Models::AppliedTagTwo>> {
+    // TODO 19-08-10 move query to a file
+    let mut stmt = match conn
+        .prepare("
+        select
+    listing.id as listing_id,
+    listing.checksum,
+    listing.file_name,
+    listing.file_path,
+    listing.file_size,
+    listing_tags.id as listing_tags_id,
+    tags.id as tags_id,
+    tags.tag
+from
+    listing
+    inner join
+        listing_tags
+        on (listing.id = listing_tags.listing_id)
+    inner join
+        tags
+        on (listing_tags.tag_id = tags.id);
+    ")
+        {
+            Ok(x) => {x},
+            Err(_error)=> { panic!("Error connecting to database when checking for applied tags")},
+        };
 
-    let results = sql_query(include_str!("queries/applied_tags.sql"))
-                    .load::<AppliedTag>(conn);
+    let applied_tag_iter = match stmt
+        .query_map(NO_PARAMS, |row| Ok(AppliedTagTwo {
+            listing_id: row.get(0)?,
+            checksum: row.get(1)?,
+            file_name: row.get(2)?,
+            file_path: row.get(3)?,
+            file_size: row.get(4)?,
+            listing_tags_id: row.get(5)?,
+            tags_id: row.get(6)?,
+            tag: row.get(7)?,
+        })) {
+            Ok(x) => {
+                x
+            },
+            Err(_error) => {
+                panic!("Failed to load results from query")
+            },
+        };
 
-    match results {
-        Err(_error) => {
-            println!("Something went wrong with finding applied tags.");
+    // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
+    let mut applied_tags: Vec<AppliedTagTwo> = Vec::new();
+
+    for applied in applied_tag_iter {
+        applied_tags.insert(0, applied.unwrap());
+    }
+
+    println!("{:?} applied tags found.", &applied_tags.len());
+
+    match applied_tags.len() {
+        0 => {
             None
         },
-        Ok(rows) => {
-            println!("{:?} listings with applied tags found.", &rows.len());
-            Some(rows)
+        _ => {
+            Some(applied_tags)
         }
     }
 }

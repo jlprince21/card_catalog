@@ -104,3 +104,15 @@ pub struct ListingTagTwo {
     pub listing_id: String,
     pub tag_id: String
 }
+
+#[derive(Debug)]
+pub struct AppliedTagTwo {
+    pub listing_id: String,
+    pub checksum: Option<String>,
+    pub file_name: String,
+    pub file_path: String,
+    pub file_size: i64,
+    pub listing_tags_id: String,
+    pub tags_id: String,
+    pub tag: String
+}
