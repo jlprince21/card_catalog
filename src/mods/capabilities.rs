@@ -75,18 +75,63 @@ pub fn delete_tag(conn: &mut rusqlite::Connection, tag_id: &str) {
     }
 }
 
-pub fn find_duplicates(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
-    let results = sql_query(include_str!("queries/duplicates.sql"))
-                    .load::<Listing>(conn);
+pub fn find_duplicates(conn: &rusqlite::Connection) -> Option<Vec<Models::ListingTwo>> {
+    // TODO 19-08-10 move query to a file
+    let mut stmt = match conn
+        .prepare("SELECT * FROM listing
+WHERE
+    checksum IN (
+        SELECT
+            checksum
+        FROM (
+            SELECT
+                checksum,
+                ROW_NUMBER()
+                OVER (PARTITION BY
+                        checksum
+                    ORDER BY
+                        id ASC) AS Row
+                FROM
+                    listing) dups
+            WHERE
+                dups.Row > 1)")
+        {
+            Ok(x) => {x},
+            Err(_error)=> { panic!("Error connecting to database when checking for duplicates")},
+        };
 
-    match results {
-        Err(_error) => {
-            println!("Something went wrong with duplicate detection.");
+    let listing_iter = match stmt
+        .query_map(NO_PARAMS, |row| Ok(ListingTwo {
+            id: row.get(0)?,
+            checksum: row.get(1)?,
+            time_created: row.get(2)?,
+            file_name: row.get(3)?,
+            file_path: row.get(4)?,
+            file_size: row.get(5)?
+        })) {
+            Ok(x) => {
+                x
+            },
+            Err(_error) => {
+                panic!("Failed to load results from query")
+            },
+        };
+
+    // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
+    let mut duplicate_listings: Vec<ListingTwo> = Vec::new();
+
+    for listing in listing_iter {
+        duplicate_listings.insert(0, listing.unwrap());
+    }
+
+    println!("{:?} duplicate files found.", &duplicate_listings.len());
+
+    match duplicate_listings.len() {
+        0 => {
             None
         },
-        Ok(rows) => {
-            println!("{:?} duplicate files found.", &rows.len());
-            Some(rows)
+        _ => {
+            Some(duplicate_listings)
         }
     }
 }

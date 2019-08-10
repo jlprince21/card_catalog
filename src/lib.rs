@@ -36,7 +36,7 @@ pub mod cc {
 
     pub fn duplicates() {
         println!("Searching for duplicate files...");
-        // Capabilities::find_duplicates(&get_connection());
+        Capabilities::find_duplicates(&get_connection());
     }
 
     pub fn hash(root_directory: &str) {
