@@ -8,7 +8,7 @@ extern crate rusqlite;
 use rusqlite::types::ToSql;
 use rusqlite::{Connection, Result, NO_PARAMS, params};
 
-use Models::{NewTag, Tag, NewListingTag, ListingTag, ListingTwo, ListingTagTwo, TagTwo};
+use Models::{ListingTwo, ListingTagTwo, TagTwo};
 
 pub fn create_listing(conn: &rusqlite::Connection, checksum: &str, file_name: &str, file_path: &str, file_size: &i64) -> Result<()> {
 
@@ -150,13 +150,11 @@ pub fn create_tag(conn: &Connection, p_tag: &str) -> Option<TagTwo> {
     };
 }
 
-pub fn delete_listing(conn: &PgConnection, p_file_path: &str) {
-    use Schema::listings::dsl::*;
-
-    // TODO 18-09-23 One day, may want to mark listings as deleted instead of removing them
-    diesel::delete(listings.filter(file_path.eq(p_file_path)))
-        .execute(conn)
-        .expect("Error deleting listing");
+pub fn delete_listing(conn: &mut rusqlite::Connection, p_listing: &ListingTwo) -> Result<()> {
+    let tx = conn.transaction()?;
+    tx.execute("DELETE from listing_tags WHERE listing_id = ?1", &[&p_listing.id])?;
+    tx.execute("DELETE from listing WHERE id = ?1", &[&p_listing.id])?;
+    tx.commit()
 }
 
 /// Deletes a listing tag while leaving associated tag untouched.
@@ -169,21 +167,11 @@ pub fn delete_listing_tag(conn: &rusqlite::Connection, p_listing_tag_id: &str) -
     Ok(res)
 }
 
-pub fn delete_tag(conn: &PgConnection, p_tag_id: &str) {
-    // TODO 18-10-20 Feels hacky putting these deletes in blocks to avoid ambiguity on the id column... would like to see this nicer
-    // TODO 18-10-20 One day, may want to mark listing_tags and tags as deleted instead of removing them
-    {
-        use Schema::listing_tags::dsl::*;
-        diesel::delete(listing_tags.filter(tag_id.eq(p_tag_id)))
-            .execute(conn)
-            .expect("Error deleting listing tag");
-    }
-    {
-        use Schema::tags::dsl::*;
-        diesel::delete(tags.filter(id.eq(p_tag_id)))
-            .execute(conn)
-            .expect("Error deleting tag");
-    }
+pub fn delete_tag(conn: &mut rusqlite::Connection, p_tag_id: &str) -> Result<()> {
+    let tx = conn.transaction()?;
+    tx.execute("DELETE from listing_tags WHERE tag_id = ?1", &[&p_tag_id])?;
+    tx.execute("DELETE from tags WHERE id = ?1", &[&p_tag_id])?;
+    tx.commit()
 }
 
 pub fn establish_connection(connection: &str) -> rusqlite::Connection {

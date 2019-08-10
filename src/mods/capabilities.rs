@@ -20,9 +20,9 @@ use mods::util as Util;
 use mods::models as Models;
 use mods::sql as Sql;
 
-use Models::{Listing};
+use Models::{Listing, ListingTwo};
 
-// use rusqlite::{Connection, Result, NO_PARAMS};
+use rusqlite::{Connection, Result, NO_PARAMS};
 
 pub enum ChecksumState {
     NotPresent,
@@ -41,24 +41,38 @@ pub fn delete_listing_tag(conn: &rusqlite::Connection, listing_tag_id: &str) {
     }
 }
 
-pub fn delete_missing_listings(conn: &PgConnection) {
+pub fn delete_missing_listings(conn: &mut rusqlite::Connection) {
     println!("Scanning for missing files.");
 
     match find_missing(&conn) {
         None => println!("none missing"),
-        Some(x) =>
+        Some(listings) =>
             {
                 println!("some missing");
-                for y in x {
-                    println!("removing listing for missing file: {}", y.file_path);
-                    Sql::delete_listing(conn, &y.file_path)
+                for curr_listing in listings {
+                    println!("removing listing for missing file: {}", curr_listing.file_path);
+                    match Sql::delete_listing(conn, &curr_listing) {
+                        Ok(x) => {
+                            println!("Deleted listing with id {}", curr_listing.id);
+                        },
+                        Err(_err) => {
+                            println!("Error deleting listing with id {}", curr_listing.id);
+                        }
+                    }
                 }
             }
     }
 }
 
-pub fn delete_tag(conn: &PgConnection, tag_id: &str) {
-    Sql::delete_tag(conn, tag_id);
+pub fn delete_tag(conn: &mut rusqlite::Connection, tag_id: &str) {
+    match Sql::delete_tag(conn, tag_id) {
+        Ok(x) => {
+            println!("Tag with id {} deleted", tag_id);
+        },
+        Err(_err) => {
+            println!("Error deleting tag with id {}", tag_id);
+        }
+    }
 }
 
 pub fn find_duplicates(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
@@ -95,18 +109,39 @@ pub fn find_tagged_listings(conn: &PgConnection) -> Option<Vec<Models::AppliedTa
     }
 }
 
-pub fn find_missing(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
-    use Schema::listings::dsl::*;
+pub fn find_missing(conn: &rusqlite::Connection) -> Option<Vec<Models::ListingTwo>> {
+     let mut stmt = match conn
+        .prepare("SELECT id, checksum, time_created, file_name, file_path, file_size FROM listing") {
+            Ok(x) => {x},
+            Err(_error)=> { panic!("Error connecting to database when gathering listings")},
+        };
 
-    let results = listings
-        .load::<Listing>(conn)
-        .expect("Error loading listings");
+    let listing_iter = match stmt
+        .query_map(NO_PARAMS, |row| Ok(ListingTwo {
+            id: row.get(0)?,
+            checksum: row.get(1)?,
+            time_created: row.get(2)?,
+            file_name: row.get(3)?,
+            file_path: row.get(4)?,
+            file_size: row.get(5)?,
+        })) {
+            Ok(x) => {
+                x
+            },
+            Err(_error) => {
+                panic!("Failed to load results from query")
+            },
+        };
 
-    let mut missing: Vec<Models::Listing> = Vec::new();
+    // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
+    let mut missing: Vec<Models::ListingTwo> = Vec::new();
 
-    for listing in results {
-        if !Util::does_file_exist(&Util::unescape_sql_string(&listing.file_path)) {
-            missing.push(listing);
+    for listing in listing_iter {
+        let the_listing: ListingTwo = listing.unwrap();
+
+        if !Util::does_file_exist(&Util::unescape_sql_string(&the_listing.file_path)) {
+            println!("Found missing {}", &the_listing.file_path);
+            missing.push(the_listing);
         }
     }
 

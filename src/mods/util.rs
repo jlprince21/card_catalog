@@ -15,6 +15,7 @@ pub fn does_file_exist(file_path: &str) -> bool {
 }
 
 pub fn escape_sql_string(file_path: &str) -> String {
+    // TODO 19-08-10 since converting to SQLite, something is broken with apostrophes... tries to hash files again
     str::replace(file_path, "'", "''")
 }
 
@@ -40,5 +41,6 @@ pub fn is_dir(entry: &DirEntry) -> bool {
 }
 
 pub fn unescape_sql_string(file_path: &str) -> String {
+    // TODO 19-08-10 since converting to SQLite, something is broken with apostrophes... tries to hash files again
     str::replace(file_path, "''", "'")
 }

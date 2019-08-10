@@ -46,7 +46,7 @@ pub mod cc {
 
     pub fn orphans() {
         println!("Removing orphans from database...");
-        // Capabilities::delete_missing_listings(&get_connection());
+        Capabilities::delete_missing_listings(&mut get_connection());
     }
 
     pub fn tag(listing_id: &str, tags: Vec<&str>) {
@@ -58,7 +58,7 @@ pub mod cc {
     }
 
     pub fn delete_tag(tag_id: &str) {
-        // Capabilities::delete_tag(&get_connection(), tag_id);
+        Capabilities::delete_tag(&mut get_connection(), tag_id);
     }
 
     pub fn new_tag(tag: &str) {
