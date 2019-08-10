@@ -30,8 +30,15 @@ pub enum ChecksumState {
     PresentWithChecksum
 }
 
-pub fn delete_listing_tag(conn: &PgConnection, listing_tag_id: &str) {
-    Sql::delete_listing_tag(conn, listing_tag_id);
+pub fn delete_listing_tag(conn: &rusqlite::Connection, listing_tag_id: &str) {
+    match Sql::delete_listing_tag(conn, listing_tag_id) {
+        Ok(x) => {
+            println!("Deleted {} listing tags with id '{}'", x, listing_tag_id);
+        },
+        Err(_err) => {
+            println!("Error deleting listing tag with id '{}'", listing_tag_id);
+        }
+    }
 }
 
 pub fn delete_missing_listings(conn: &PgConnection) {

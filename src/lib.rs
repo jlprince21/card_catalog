@@ -66,6 +66,6 @@ pub mod cc {
     }
 
     pub fn delete_tag_listing(listing_tag_id: &str) {
-        // Capabilities::delete_listing_tag(&get_connection(), listing_tag_id);
+        Capabilities::delete_listing_tag(&get_connection(), listing_tag_id);
     }
 }

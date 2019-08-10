@@ -42,7 +42,7 @@ fn main() {
     if let Some(matches) = matches.subcommand_matches("delete-tag-listing") {
         // cargo run -- delete-tag-listing 56982fc3-091a-489c-bd6c-c7f916965d4b
         let listing_tag_id = matches.value_of("listing-tag-id").unwrap_or("none");
-        println!("Deleting tag listing with id {}.", listing_tag_id);
+        println!("Deleting tag listing with id {}", listing_tag_id);
         cc::delete_tag_listing(listing_tag_id);
         std::process::exit(0);
     }

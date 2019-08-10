@@ -160,13 +160,13 @@ pub fn delete_listing(conn: &PgConnection, p_file_path: &str) {
 }
 
 /// Deletes a listing tag while leaving associated tag untouched.
-pub fn delete_listing_tag(conn: &PgConnection, p_listing_tag_id: &str) {
-    use Schema::listing_tags::dsl::*;
+pub fn delete_listing_tag(conn: &rusqlite::Connection, p_listing_tag_id: &str) -> Result<usize> {
+    let res = conn.execute(
+        "DELETE from listing_tags WHERE id = ?1",
+        &[&p_listing_tag_id as &ToSql],
+    )?;
 
-    // TODO 18-10-20 One day, may want to mark listing_tags as deleted instead of removing them
-    diesel::delete(listing_tags.filter(id.eq(p_listing_tag_id)))
-        .execute(conn)
-        .expect("Error deleting listing tag");
+    Ok(res)
 }
 
 pub fn delete_tag(conn: &PgConnection, p_tag_id: &str) {
