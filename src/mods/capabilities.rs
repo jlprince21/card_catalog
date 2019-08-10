@@ -185,18 +185,18 @@ pub fn start_hashing(root_directory: &str, conn: &rusqlite::Connection) {
     }
 }
 
-pub fn create_tag(conn: &PgConnection, tag: &str) {
+pub fn create_tag(conn: &rusqlite::Connection, tag: &str) {
     Sql::create_tag(conn, tag);
 }
 
-pub fn create_listing_tag(conn: &PgConnection, listing_id: &str, tag_id: &str) {
+pub fn create_listing_tag(conn: &rusqlite::Connection, listing_id: &str, tag_id: &str) {
     Sql::create_listing_tag(conn, listing_id, tag_id);
 }
 
-pub fn tag_listing(conn: &PgConnection, listing_id: &str, tag_name: &str) {
-    use Models::Tag;
+pub fn tag_listing(conn: &rusqlite::Connection, listing_id: &str, tag_name: &str) {
+    use Models::TagTwo;
 
     // since tags and listing tags will be made if not existant, we can take advantage of the create SQL
-    let the_tag: Tag = Sql::create_tag(conn, tag_name);
+    let the_tag: TagTwo = Sql::create_tag(conn, tag_name).unwrap();
     Sql::create_listing_tag(conn, listing_id, &the_tag.id);
 }

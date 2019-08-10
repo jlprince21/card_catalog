@@ -8,7 +8,7 @@ extern crate rusqlite;
 use rusqlite::types::ToSql;
 use rusqlite::{Connection, Result, NO_PARAMS, params};
 
-use Models::{NewTag, Tag, NewListingTag, ListingTag, ListingTwo};
+use Models::{NewTag, Tag, NewListingTag, ListingTag, ListingTwo, ListingTagTwo, TagTwo};
 
 pub fn create_listing(conn: &rusqlite::Connection, checksum: &str, file_name: &str, file_path: &str, file_size: &i64) -> Result<()> {
 
@@ -37,66 +37,117 @@ pub fn create_listing(conn: &rusqlite::Connection, checksum: &str, file_name: &s
     Ok(())
 }
 
-pub fn create_listing_tag(conn: &PgConnection, p_listing_id: &str, p_tag_id: &str) -> ListingTag {
-    use Schema::listing_tags;
-    use Schema::listing_tags::dsl::*;
-
-    let new_listing_tag = NewListingTag {
-        id: &Uuid::new_v4().to_string(),
-        listing_id: &p_listing_id,
-        tag_id: &p_tag_id
+pub fn create_listing_tag(conn: &Connection, p_listing_id: &str, p_tag_id: &str) -> Option<ListingTagTwo> {
+    let new_listing_tag = ListingTagTwo {
+        id: Uuid::new_v4().to_string(),
+        listing_id: p_listing_id.to_string(),
+        tag_id: p_tag_id.to_string()
     };
 
-    let single_listing_tag: Vec<ListingTag> = listing_tags
-                                                .filter(listing_id.eq(p_listing_id))
-                                                .filter(tag_id.eq(p_tag_id))
-                                                .limit(1)
-                                                .load::<ListingTag>(conn)
-                                                .expect("Error loading listing tag");
+    let mut stmt = match conn
+        .prepare(&format!("SELECT id, listing_id, tag_id FROM listing_tags where listing_id = '{}' AND tag_id = '{}'", &p_listing_id, &p_tag_id)) {
+            Ok(x) => {x},
+            Err(_error)=> { panic!("Error connecting to database when checking if listing is already tagged")},
+        };
+
+    let tag_iter = match stmt
+        .query_map(NO_PARAMS, |row| Ok(ListingTagTwo {
+            id: row.get(0)?,
+            listing_id: row.get(1)?,
+            tag_id: row.get(2)?,
+        })) {
+            Ok(x) => {
+                x
+            },
+            Err(_error) => {
+                panic!("Failed to load results from query")
+            },
+        };
+
+    // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
+    let mut single_listing_tag: Vec<ListingTagTwo> = Vec::new();
+
+    for tag in tag_iter {
+        single_listing_tag.insert(0, tag.unwrap());
+    }
 
     match single_listing_tag.len() {
         0 => {
-                // TODO 18-10-13 Need proper error handling for when inserts fail eg foreign key violations.
-                diesel::insert_into(listing_tags::table)
-                    .values(&new_listing_tag)
-                    .get_result(conn)
-                    .expect("Error saving new listing tag")
+                match conn.execute(
+                    "INSERT INTO listing_tags (id, listing_id, tag_id)
+                        VALUES(?1, ?2, ?3)",
+                    &[&new_listing_tag.id as &ToSql,
+                        &new_listing_tag.listing_id as &ToSql,
+                        &new_listing_tag.tag_id as &ToSql],
+                ) {
+                    Ok(_inserted) => {
+                        println!("Tag '{}' created and applied to listing '{}'", p_tag_id, p_listing_id);
+                        return Some(new_listing_tag);
+                    },
+                    Err(_err) => {
+                        panic!("Failed to create new tag.")
+                    }
+                }
             },
         _ => {
-            let result: ListingTag = single_listing_tag.into_iter().nth(0).expect("Failed to load existing listing tag.");
-            result
+            println!("listing is already tagged, returning existing tag");
+            let result: ListingTagTwo = single_listing_tag.into_iter().nth(0).expect("Failed to load existing listing tag.");
+            Some(result)
         }
     }
 }
 
-pub fn create_tag(conn: &PgConnection, p_tag: &str) -> Tag {
-    use Schema::tags;
-    use Schema::tags::dsl::*;
-
-    let new_tag = NewTag {
-        id: &Uuid::new_v4().to_string(),
-        tag: p_tag
+pub fn create_tag(conn: &Connection, p_tag: &str) -> Option<TagTwo> {
+    let new_tag = TagTwo {
+        id: Uuid::new_v4().to_string(),
+        tag: p_tag.to_string()
     };
 
-    let single_tag: Vec<Tag> = tags
-                                .filter(tag.eq(p_tag))
-                                .limit(1)
-                                .load::<Tag>(conn)
-                                .expect("Error loading tag");
+    let mut stmt = match conn
+        .prepare(&format!("SELECT id, tag FROM tags where tag = '{}'", &p_tag)) {
+            Ok(x) => {x},
+            Err(_error)=> { panic!("Error connecting to database when checking if tag exists")},
+        };
 
-    match single_tag.len() {
-        0 => {
-            // TODO 18-10-13 Need proper error handling for when inserts fail eg foreign key violations.
-            diesel::insert_into(tags::table)
-                .values(&new_tag)
-                .get_result(conn)
-                .expect("Error saving new tag")
+    let tag_iter = match stmt
+        .query_map(NO_PARAMS, |row| Ok(TagTwo {
+            id: row.get(0)?,
+            tag: row.get(1)?,
+        })) {
+            Ok(x) => {
+                x
             },
-        _ => {
-            let result: Tag = single_tag.into_iter().nth(0).expect("Failed to load existing tag.");
-            result
-        }
+            Err(_error) => {
+                panic!("Failed to load results from query")
+            },
+        };
+
+    // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
+    let mut single_tag: Vec<TagTwo> = Vec::new();
+
+    for tag in tag_iter {
+        single_tag.insert(0, tag.unwrap());
     }
+
+    if single_tag.len() == 1 {
+        println!("Found existing tag");
+        return Some(single_tag.first().cloned().unwrap()); // TODO 19-08-09 not a huge fan of cloning, hope to make this better
+    }
+
+    match conn.execute(
+        "INSERT INTO tags (id, tag)
+            VALUES(?1, ?2)",
+        &[&new_tag.id as &ToSql,
+            &new_tag.tag as &ToSql],
+    ) {
+        Ok(_inserted) => {
+            println!("New tag '{}' created", p_tag);
+            return Some(new_tag);
+        },
+        Err(_err) => {
+            panic!("Failed to create new tag.")
+        }
+    };
 }
 
 pub fn delete_listing(conn: &PgConnection, p_file_path: &str) {

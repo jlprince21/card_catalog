@@ -91,3 +91,16 @@ pub struct ListingTwo {
     pub file_path: String,
     pub file_size: i64
 }
+
+#[derive(Debug, Clone)]
+pub struct TagTwo {
+    pub id: String,
+    pub tag: String
+}
+
+#[derive(Debug, Clone)]
+pub struct ListingTagTwo {
+    pub id: String,
+    pub listing_id: String,
+    pub tag_id: String
+}

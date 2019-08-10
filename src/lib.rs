@@ -50,9 +50,9 @@ pub mod cc {
     }
 
     pub fn tag(listing_id: &str, tags: Vec<&str>) {
-        // for tag in tags {
-        //     Capabilities::tag_listing(&get_connection(), &listing_id, tag);
-        // }
+        for tag in tags {
+            Capabilities::tag_listing(&get_connection(), &listing_id, tag);
+        }
         println!("Tag(s) applied successfully!");
         std::process::exit(0);
     }
@@ -62,7 +62,7 @@ pub mod cc {
     }
 
     pub fn new_tag(tag: &str) {
-        // Capabilities::create_tag(&get_connection(), tag);
+        Capabilities::create_tag(&get_connection(), tag);
     }
 
     pub fn delete_tag_listing(listing_tag_id: &str) {
