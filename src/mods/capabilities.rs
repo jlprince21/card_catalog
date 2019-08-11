@@ -19,7 +19,7 @@ use mods::sql as Sql;
 
 use Models::{Listing, AppliedTag};
 
-use rusqlite::{Connection, NO_PARAMS};
+use rusqlite::{Connection, NO_PARAMS, Result};
 
 use std::fs;
 
@@ -262,6 +262,44 @@ pub fn is_file_hashed(file_path_to_check: &str, conn: &Connection) -> (ChecksumS
     } else {
         (ChecksumState::PresentWithChecksum, Some(results.into_iter().nth(0).expect("Could not get listing id").id))
     }
+}
+
+pub fn setup(conn: &Connection) -> Result<()> {
+    conn.execute(
+        "CREATE TABLE listing (
+	        id	TEXT NOT NULL,
+	        checksum	TEXT,
+	        time_created	TEXT NOT NULL,
+	        file_name	TEXT NOT NULL,
+	        file_path	TEXT NOT NULL,
+	        file_size	INTEGER,
+	        PRIMARY KEY(id)
+        )",
+        NO_PARAMS,
+    )?;
+
+    conn.execute(
+        "CREATE TABLE tag (
+	        id	TEXT,
+	        tag	TEXT NOT NULL,
+	        PRIMARY KEY(id)
+        )",
+        NO_PARAMS,
+    )?;
+
+    conn.execute(
+        "CREATE TABLE listing_tag (
+	        id	TEXT,
+	        listing_id	TEXT NOT NULL,
+	        tag_id	TEXT NOT NULL,
+	        PRIMARY KEY(id),
+	        FOREIGN KEY(listing_id) REFERENCES listing(id),
+            FOREIGN KEY(tag_id) REFERENCES tag(id)
+        )",
+        NO_PARAMS,
+    )?;
+
+    Ok(())
 }
 
 pub fn start_hashing(root_directory: &str, conn: &Connection) {

@@ -43,6 +43,19 @@ pub mod cc {
         Capabilities::delete_missing_listings(&mut get_connection());
     }
 
+    pub fn setup() {
+        println!("Setting up database...");
+        match Capabilities::setup(&get_connection()) {
+            Ok(_x) => {
+                println!("Database setup successfully.");
+            },
+            Err(_err) => {
+                println!("Error when trying to setup database.");
+            }
+        };
+        std::process::exit(0);
+    }
+
     pub fn tag(listing_id: &str, tags: Vec<&str>) {
         for tag in tags {
             Capabilities::tag_listing(&get_connection(), &listing_id, tag);

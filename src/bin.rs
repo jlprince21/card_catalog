@@ -67,6 +67,9 @@ fn main() {
         },
         "orphans" => {
             cc::orphans();
+        },
+        "setup" => {
+            cc::setup();
         }
         _ => {
             println!("No valid args provided, exiting.");
