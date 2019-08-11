@@ -19,7 +19,7 @@ use mods::sql as Sql;
 
 use Models::{Listing, AppliedTag};
 
-use rusqlite::{Connection, Result, NO_PARAMS};
+use rusqlite::{Connection, NO_PARAMS};
 
 pub enum ChecksumState {
     NotPresent,
@@ -27,7 +27,7 @@ pub enum ChecksumState {
     PresentWithChecksum
 }
 
-pub fn delete_listing_tag(conn: &rusqlite::Connection, listing_tag_id: &str) {
+pub fn delete_listing_tag(conn: &Connection, listing_tag_id: &str) {
     match Sql::delete_listing_tag(conn, listing_tag_id) {
         Ok(x) => {
             println!("Deleted {} listing tags with id '{}'", x, listing_tag_id);
@@ -38,7 +38,7 @@ pub fn delete_listing_tag(conn: &rusqlite::Connection, listing_tag_id: &str) {
     }
 }
 
-pub fn delete_missing_listings(conn: &mut rusqlite::Connection) {
+pub fn delete_missing_listings(conn: &mut Connection) {
     println!("Scanning for missing files.");
 
     match find_missing(&conn) {
@@ -49,7 +49,7 @@ pub fn delete_missing_listings(conn: &mut rusqlite::Connection) {
                 for curr_listing in listings {
                     println!("removing listing for missing file: {}", curr_listing.file_path);
                     match Sql::delete_listing(conn, &curr_listing) {
-                        Ok(x) => {
+                        Ok(_x) => {
                             println!("Deleted listing with id {}", curr_listing.id);
                         },
                         Err(_err) => {
@@ -61,9 +61,9 @@ pub fn delete_missing_listings(conn: &mut rusqlite::Connection) {
     }
 }
 
-pub fn delete_tag(conn: &mut rusqlite::Connection, tag_id: &str) {
+pub fn delete_tag(conn: &mut Connection, tag_id: &str) {
     match Sql::delete_tag(conn, tag_id) {
-        Ok(x) => {
+        Ok(_x) => {
             println!("Tag with id {} deleted", tag_id);
         },
         Err(_err) => {
@@ -72,7 +72,7 @@ pub fn delete_tag(conn: &mut rusqlite::Connection, tag_id: &str) {
     }
 }
 
-pub fn find_duplicates(conn: &rusqlite::Connection) -> Option<Vec<Models::Listing>> {
+pub fn find_duplicates(conn: &Connection) -> Option<Vec<Models::Listing>> {
     // TODO 19-08-10 move query to a file
     let mut stmt = match conn
         .prepare("SELECT * FROM listing
@@ -133,7 +133,7 @@ WHERE
     }
 }
 
-pub fn find_tagged_listings(conn: &rusqlite::Connection) -> Option<Vec<Models::AppliedTag>> {
+pub fn find_tagged_listings(conn: &Connection) -> Option<Vec<Models::AppliedTag>> {
     // TODO 19-08-10 move query to a file
     let mut stmt = match conn
         .prepare("
@@ -198,7 +198,7 @@ from
     }
 }
 
-pub fn find_missing(conn: &rusqlite::Connection) -> Option<Vec<Models::Listing>> {
+pub fn find_missing(conn: &Connection) -> Option<Vec<Models::Listing>> {
      let mut stmt = match conn
         .prepare("SELECT id, checksum, time_created, file_name, file_path, file_size FROM listing") {
             Ok(x) => {x},
@@ -267,7 +267,7 @@ pub fn hash_file(file_name: &str) -> String {
     format!("{:x}", hash)
 }
 
-pub fn is_file_hashed(file_path_to_check: &str, conn: &rusqlite::Connection) -> (ChecksumState, Option<String>) {
+pub fn is_file_hashed(file_path_to_check: &str, conn: &Connection) -> (ChecksumState, Option<String>) {
     let results = Sql::find_single_file(conn, file_path_to_check);
 
     if results.is_empty(){
@@ -279,7 +279,7 @@ pub fn is_file_hashed(file_path_to_check: &str, conn: &rusqlite::Connection) -> 
     }
 }
 
-pub fn start_hashing(root_directory: &str, conn: &rusqlite::Connection) {
+pub fn start_hashing(root_directory: &str, conn: &Connection) {
     let walker = WalkDir::new(root_directory).into_iter();
     for entry in walker.filter_map(|e| e.ok()) {
         if Util::is_dir(&entry) {
@@ -316,15 +316,15 @@ pub fn start_hashing(root_directory: &str, conn: &rusqlite::Connection) {
     }
 }
 
-pub fn create_tag(conn: &rusqlite::Connection, tag: &str) {
+pub fn create_tag(conn: &Connection, tag: &str) {
     Sql::create_tag(conn, tag);
 }
 
-pub fn create_listing_tag(conn: &rusqlite::Connection, listing_id: &str, tag_id: &str) {
+pub fn create_listing_tag(conn: &Connection, listing_id: &str, tag_id: &str) {
     Sql::create_listing_tag(conn, listing_id, tag_id);
 }
 
-pub fn tag_listing(conn: &rusqlite::Connection, listing_id: &str, tag_name: &str) {
+pub fn tag_listing(conn: &Connection, listing_id: &str, tag_name: &str) {
     use Models::Tag;
 
     // since tags and listing tags will be made if not existant, we can take advantage of the create SQL

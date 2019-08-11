@@ -3,11 +3,11 @@ use uuid::Uuid;
 extern crate rusqlite;
 
 use rusqlite::types::ToSql;
-use rusqlite::{Connection, Result, NO_PARAMS, params};
+use rusqlite::{Connection, Result, NO_PARAMS};
 
 use Models::{Listing, ListingTag, Tag};
 
-pub fn create_listing(conn: &rusqlite::Connection, checksum: &str, file_name: &str, file_path: &str, file_size: &i64) -> Result<()> {
+pub fn create_listing(conn: &Connection, checksum: &str, file_name: &str, file_path: &str, file_size: &i64) -> Result<()> {
 
     // TODO 19-08-08 the checksum here may need to have an alteration in event of being empty; not sure if this code is safe
     let new_listing = Listing {
@@ -147,7 +147,7 @@ pub fn create_tag(conn: &Connection, p_tag: &str) -> Option<Tag> {
     };
 }
 
-pub fn delete_listing(conn: &mut rusqlite::Connection, p_listing: &Listing) -> Result<()> {
+pub fn delete_listing(conn: &mut Connection, p_listing: &Listing) -> Result<()> {
     let tx = conn.transaction()?;
     tx.execute("DELETE from listing_tag WHERE listing_id = ?1", &[&p_listing.id])?;
     tx.execute("DELETE from listing WHERE id = ?1", &[&p_listing.id])?;
@@ -155,7 +155,7 @@ pub fn delete_listing(conn: &mut rusqlite::Connection, p_listing: &Listing) -> R
 }
 
 /// Deletes a listing tag while leaving associated tag untouched.
-pub fn delete_listing_tag(conn: &rusqlite::Connection, p_listing_tag_id: &str) -> Result<usize> {
+pub fn delete_listing_tag(conn: &Connection, p_listing_tag_id: &str) -> Result<usize> {
     let res = conn.execute(
         "DELETE from listing_tag WHERE id = ?1",
         &[&p_listing_tag_id as &ToSql],
@@ -164,18 +164,18 @@ pub fn delete_listing_tag(conn: &rusqlite::Connection, p_listing_tag_id: &str) -
     Ok(res)
 }
 
-pub fn delete_tag(conn: &mut rusqlite::Connection, p_tag_id: &str) -> Result<()> {
+pub fn delete_tag(conn: &mut Connection, p_tag_id: &str) -> Result<()> {
     let tx = conn.transaction()?;
     tx.execute("DELETE from listing_tag WHERE tag_id = ?1", &[&p_tag_id])?;
     tx.execute("DELETE from tag WHERE id = ?1", &[&p_tag_id])?;
     tx.commit()
 }
 
-pub fn establish_connection(connection: &str) -> rusqlite::Connection {
-    rusqlite::Connection::open(&connection).unwrap_or_else(|_| panic!("Error connecting to {}", connection))
+pub fn establish_connection(connection: &str) -> Connection {
+    Connection::open(&connection).unwrap_or_else(|_| panic!("Error connecting to {}", connection))
 }
 
-pub fn find_single_file(conn: &rusqlite::Connection, p_file_path: &str) -> Vec<Listing> {
+pub fn find_single_file(conn: &Connection, p_file_path: &str) -> Vec<Listing> {
     let mut stmt = match conn
         .prepare(&format!("SELECT id, checksum, time_created, file_name, file_path, file_size FROM listing where file_path='{}'", &p_file_path))
         {
@@ -210,7 +210,7 @@ pub fn find_single_file(conn: &rusqlite::Connection, p_file_path: &str) -> Vec<L
     single_listing
 }
 
-pub fn update_hash(conn: &rusqlite::Connection, id: &str, hash: &str) {
+pub fn update_hash(conn: &Connection, id: &str, hash: &str) {
     let query = format!("UPDATE listing SET checksum = '{}' WHERE id = '{}'", &hash, &id).to_string();
 
     match conn.execute(&query, NO_PARAMS) {
