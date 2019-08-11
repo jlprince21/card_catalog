@@ -1,6 +1,3 @@
-use diesel;
-use diesel::prelude::*;
-
 use uuid::Uuid;
 
 extern crate rusqlite;
@@ -8,12 +5,12 @@ extern crate rusqlite;
 use rusqlite::types::ToSql;
 use rusqlite::{Connection, Result, NO_PARAMS, params};
 
-use Models::{ListingTwo, ListingTagTwo, TagTwo};
+use Models::{Listing, ListingTag, Tag};
 
 pub fn create_listing(conn: &rusqlite::Connection, checksum: &str, file_name: &str, file_path: &str, file_size: &i64) -> Result<()> {
 
     // TODO 19-08-08 the checksum here may need to have an alteration in event of being empty; not sure if this code is safe
-    let new_listing = ListingTwo {
+    let new_listing = Listing {
         id: Uuid::new_v4().to_string(),
         checksum: Some(checksum.to_string()),
         time_created: time::get_time(),
@@ -37,8 +34,8 @@ pub fn create_listing(conn: &rusqlite::Connection, checksum: &str, file_name: &s
     Ok(())
 }
 
-pub fn create_listing_tag(conn: &Connection, p_listing_id: &str, p_tag_id: &str) -> Option<ListingTagTwo> {
-    let new_listing_tag = ListingTagTwo {
+pub fn create_listing_tag(conn: &Connection, p_listing_id: &str, p_tag_id: &str) -> Option<ListingTag> {
+    let new_listing_tag = ListingTag {
         id: Uuid::new_v4().to_string(),
         listing_id: p_listing_id.to_string(),
         tag_id: p_tag_id.to_string()
@@ -51,7 +48,7 @@ pub fn create_listing_tag(conn: &Connection, p_listing_id: &str, p_tag_id: &str)
         };
 
     let tag_iter = match stmt
-        .query_map(NO_PARAMS, |row| Ok(ListingTagTwo {
+        .query_map(NO_PARAMS, |row| Ok(ListingTag {
             id: row.get(0)?,
             listing_id: row.get(1)?,
             tag_id: row.get(2)?,
@@ -65,7 +62,7 @@ pub fn create_listing_tag(conn: &Connection, p_listing_id: &str, p_tag_id: &str)
         };
 
     // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
-    let mut single_listing_tag: Vec<ListingTagTwo> = Vec::new();
+    let mut single_listing_tag: Vec<ListingTag> = Vec::new();
 
     for tag in tag_iter {
         single_listing_tag.insert(0, tag.unwrap());
@@ -91,14 +88,14 @@ pub fn create_listing_tag(conn: &Connection, p_listing_id: &str, p_tag_id: &str)
             },
         _ => {
             println!("listing is already tagged, returning existing tag");
-            let result: ListingTagTwo = single_listing_tag.into_iter().nth(0).expect("Failed to load existing listing tag.");
+            let result: ListingTag = single_listing_tag.into_iter().nth(0).expect("Failed to load existing listing tag.");
             Some(result)
         }
     }
 }
 
-pub fn create_tag(conn: &Connection, p_tag: &str) -> Option<TagTwo> {
-    let new_tag = TagTwo {
+pub fn create_tag(conn: &Connection, p_tag: &str) -> Option<Tag> {
+    let new_tag = Tag {
         id: Uuid::new_v4().to_string(),
         tag: p_tag.to_string()
     };
@@ -110,7 +107,7 @@ pub fn create_tag(conn: &Connection, p_tag: &str) -> Option<TagTwo> {
         };
 
     let tag_iter = match stmt
-        .query_map(NO_PARAMS, |row| Ok(TagTwo {
+        .query_map(NO_PARAMS, |row| Ok(Tag {
             id: row.get(0)?,
             tag: row.get(1)?,
         })) {
@@ -123,7 +120,7 @@ pub fn create_tag(conn: &Connection, p_tag: &str) -> Option<TagTwo> {
         };
 
     // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
-    let mut single_tag: Vec<TagTwo> = Vec::new();
+    let mut single_tag: Vec<Tag> = Vec::new();
 
     for tag in tag_iter {
         single_tag.insert(0, tag.unwrap());
@@ -150,7 +147,7 @@ pub fn create_tag(conn: &Connection, p_tag: &str) -> Option<TagTwo> {
     };
 }
 
-pub fn delete_listing(conn: &mut rusqlite::Connection, p_listing: &ListingTwo) -> Result<()> {
+pub fn delete_listing(conn: &mut rusqlite::Connection, p_listing: &Listing) -> Result<()> {
     let tx = conn.transaction()?;
     tx.execute("DELETE from listing_tags WHERE listing_id = ?1", &[&p_listing.id])?;
     tx.execute("DELETE from listing WHERE id = ?1", &[&p_listing.id])?;
@@ -178,7 +175,7 @@ pub fn establish_connection(connection: &str) -> rusqlite::Connection {
     rusqlite::Connection::open(&connection).unwrap_or_else(|_| panic!("Error connecting to {}", connection))
 }
 
-pub fn find_single_file(conn: &rusqlite::Connection, p_file_path: &str) -> Vec<ListingTwo> {
+pub fn find_single_file(conn: &rusqlite::Connection, p_file_path: &str) -> Vec<Listing> {
     let mut stmt = match conn
         .prepare(&format!("SELECT id, checksum, time_created, file_name, file_path, file_size FROM listing where file_path='{}'", &p_file_path))
         {
@@ -187,7 +184,7 @@ pub fn find_single_file(conn: &rusqlite::Connection, p_file_path: &str) -> Vec<L
         };
 
     let listing_iter = match stmt
-        .query_map(NO_PARAMS, |row| Ok(ListingTwo {
+        .query_map(NO_PARAMS, |row| Ok(Listing {
             id: row.get(0)?,
             checksum: row.get(1)?,
             time_created: row.get(2)?,
@@ -204,7 +201,7 @@ pub fn find_single_file(conn: &rusqlite::Connection, p_file_path: &str) -> Vec<L
         };
 
     // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
-    let mut single_listing: Vec<ListingTwo> = Vec::new();
+    let mut single_listing: Vec<Listing> = Vec::new();
 
     for listing in listing_iter {
         single_listing.insert(0, listing.unwrap());

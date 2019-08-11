@@ -3,9 +3,6 @@ extern crate walkdir;
 
 use self::walkdir::{WalkDir};
 
-use diesel::prelude::*;
-use diesel::sql_query;
-
 // file hashing
 use self::twox_hash::XxHash;
 use std::hash::Hasher;
@@ -20,7 +17,7 @@ use mods::util as Util;
 use mods::models as Models;
 use mods::sql as Sql;
 
-use Models::{Listing, ListingTwo, AppliedTagTwo};
+use Models::{Listing, AppliedTag};
 
 use rusqlite::{Connection, Result, NO_PARAMS};
 
@@ -75,7 +72,7 @@ pub fn delete_tag(conn: &mut rusqlite::Connection, tag_id: &str) {
     }
 }
 
-pub fn find_duplicates(conn: &rusqlite::Connection) -> Option<Vec<Models::ListingTwo>> {
+pub fn find_duplicates(conn: &rusqlite::Connection) -> Option<Vec<Models::Listing>> {
     // TODO 19-08-10 move query to a file
     let mut stmt = match conn
         .prepare("SELECT * FROM listing
@@ -101,7 +98,7 @@ WHERE
         };
 
     let listing_iter = match stmt
-        .query_map(NO_PARAMS, |row| Ok(ListingTwo {
+        .query_map(NO_PARAMS, |row| Ok(Listing {
             id: row.get(0)?,
             checksum: row.get(1)?,
             time_created: row.get(2)?,
@@ -118,7 +115,7 @@ WHERE
         };
 
     // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
-    let mut duplicate_listings: Vec<ListingTwo> = Vec::new();
+    let mut duplicate_listings: Vec<Listing> = Vec::new();
 
     for listing in listing_iter {
         duplicate_listings.insert(0, listing.unwrap());
@@ -136,7 +133,7 @@ WHERE
     }
 }
 
-pub fn find_tagged_listings(conn: &rusqlite::Connection) -> Option<Vec<Models::AppliedTagTwo>> {
+pub fn find_tagged_listings(conn: &rusqlite::Connection) -> Option<Vec<Models::AppliedTag>> {
     // TODO 19-08-10 move query to a file
     let mut stmt = match conn
         .prepare("
@@ -164,7 +161,7 @@ from
         };
 
     let applied_tag_iter = match stmt
-        .query_map(NO_PARAMS, |row| Ok(AppliedTagTwo {
+        .query_map(NO_PARAMS, |row| Ok(AppliedTag {
             listing_id: row.get(0)?,
             checksum: row.get(1)?,
             file_name: row.get(2)?,
@@ -183,7 +180,7 @@ from
         };
 
     // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
-    let mut applied_tags: Vec<AppliedTagTwo> = Vec::new();
+    let mut applied_tags: Vec<AppliedTag> = Vec::new();
 
     for applied in applied_tag_iter {
         applied_tags.insert(0, applied.unwrap());
@@ -201,7 +198,7 @@ from
     }
 }
 
-pub fn find_missing(conn: &rusqlite::Connection) -> Option<Vec<Models::ListingTwo>> {
+pub fn find_missing(conn: &rusqlite::Connection) -> Option<Vec<Models::Listing>> {
      let mut stmt = match conn
         .prepare("SELECT id, checksum, time_created, file_name, file_path, file_size FROM listing") {
             Ok(x) => {x},
@@ -209,7 +206,7 @@ pub fn find_missing(conn: &rusqlite::Connection) -> Option<Vec<Models::ListingTw
         };
 
     let listing_iter = match stmt
-        .query_map(NO_PARAMS, |row| Ok(ListingTwo {
+        .query_map(NO_PARAMS, |row| Ok(Listing {
             id: row.get(0)?,
             checksum: row.get(1)?,
             time_created: row.get(2)?,
@@ -226,10 +223,10 @@ pub fn find_missing(conn: &rusqlite::Connection) -> Option<Vec<Models::ListingTw
         };
 
     // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
-    let mut missing: Vec<Models::ListingTwo> = Vec::new();
+    let mut missing: Vec<Models::Listing> = Vec::new();
 
     for listing in listing_iter {
-        let the_listing: ListingTwo = listing.unwrap();
+        let the_listing: Listing = listing.unwrap();
 
         if !Util::does_file_exist(&Util::unescape_sql_string(&the_listing.file_path)) {
             println!("Found missing {}", &the_listing.file_path);
@@ -328,9 +325,9 @@ pub fn create_listing_tag(conn: &rusqlite::Connection, listing_id: &str, tag_id:
 }
 
 pub fn tag_listing(conn: &rusqlite::Connection, listing_id: &str, tag_name: &str) {
-    use Models::TagTwo;
+    use Models::Tag;
 
     // since tags and listing tags will be made if not existant, we can take advantage of the create SQL
-    let the_tag: TagTwo = Sql::create_tag(conn, tag_name).unwrap();
+    let the_tag: Tag = Sql::create_tag(conn, tag_name).unwrap();
     Sql::create_listing_tag(conn, listing_id, &the_tag.id);
 }

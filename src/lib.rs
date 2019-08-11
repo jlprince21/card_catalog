@@ -7,15 +7,9 @@
 extern crate clap;
 extern crate config;
 
-#[macro_use]
-extern crate diesel;
-
 extern crate rusqlite;
 extern crate time;
 extern crate uuid;
-
-pub mod schema;
-use ::schema as Schema;
 
 pub mod mods;
 use mods::util as Util;
