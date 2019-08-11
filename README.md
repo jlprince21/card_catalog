@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/jlprince21/card_catalog.svg?branch=master)](https://travis-ci.org/jlprince21/card_catalog)
 
-Written in Rust, this program collects file metadata and stores it in a PostgreSQL
+Written in Rust, this program collects file metadata and stores it in a SQLite
 database. Some things it gathers include:
 
 1. File name
@@ -16,15 +16,15 @@ is underway... stay tuned!
 
 # Getting Started
 
-To run the project, you will need a PostgreSQL database setup and configure the
-`.env` file in this project to point to your database. See *Configuration* section
-below.
+To run the project, you will need a SQLite database setup and configure the
+`.env` file in this project to point to your database file. See *Configuration*
+section below.
 
-Next, you will need to use [diesel](http://diesel.rs/) to run the database migrations
-necessary to create tables needed for the project.
+Next, you will need to create the requisite tables by running the database setup
+process
 
 ```
-diesel migration run
+cargo run -- --action setup
 ```
 
 Next, set any remaining configuration values as detailed in *Configuration*.
@@ -45,17 +45,11 @@ cargo build --release
 
 See *Arguments* section for details on the arguments this program accepts.
 
-Note: if running on Ubuntu, you may need to install libpq-dev in order for Diesel
-to compile when cargo builds.
-
-```
-sudo apt install libpq-dev
-```
-
 # Arguments
 
 This app takes a minimum of one command line argument before it will perform any
-action beyond simply terminating. This section is divided into commands  subcommands.
+action beyond simply terminating. This section is divided into commands and
+subcommands.
 
 ## Commands
 
@@ -127,13 +121,12 @@ cargo run -- delete-tag 56982fc3-091a-489c-bd6c-c7f916965d4b
 
 `.env` configuration setting include:
 
-1. DATABASE_URL - PostgreSQL connection string.
-2. DIRECTORY_TO_SCAN - root directory location to start scanning files from.
+1. DIRECTORY_TO_SCAN - root directory location to start scanning files from.
+2. SQLITE_CONNECTION - path where SQLite database file will be read/write from.
 
 # More
 
-See `documentation` folder for more information including how to host a PostgreSQL
-database setup with pgAdmin compatible with this project.
+See `documentation` folder for more information.
 
 # License
 
