@@ -42,7 +42,7 @@ pub fn create_listing_tag(conn: &Connection, p_listing_id: &str, p_tag_id: &str)
     };
 
     let mut stmt = match conn
-        .prepare(&format!("SELECT id, listing_id, tag_id FROM listing_tags where listing_id = '{}' AND tag_id = '{}'", &p_listing_id, &p_tag_id)) {
+        .prepare(&format!("SELECT id, listing_id, tag_id FROM listing_tag where listing_id = '{}' AND tag_id = '{}'", &p_listing_id, &p_tag_id)) {
             Ok(x) => {x},
             Err(_error)=> { panic!("Error connecting to database when checking if listing is already tagged")},
         };
@@ -71,7 +71,7 @@ pub fn create_listing_tag(conn: &Connection, p_listing_id: &str, p_tag_id: &str)
     match single_listing_tag.len() {
         0 => {
                 match conn.execute(
-                    "INSERT INTO listing_tags (id, listing_id, tag_id)
+                    "INSERT INTO listing_tag (id, listing_id, tag_id)
                         VALUES(?1, ?2, ?3)",
                     &[&new_listing_tag.id as &ToSql,
                         &new_listing_tag.listing_id as &ToSql,
@@ -101,7 +101,7 @@ pub fn create_tag(conn: &Connection, p_tag: &str) -> Option<Tag> {
     };
 
     let mut stmt = match conn
-        .prepare(&format!("SELECT id, tag FROM tags where tag = '{}'", &p_tag)) {
+        .prepare(&format!("SELECT id, tag FROM tag where tag = '{}'", &p_tag)) {
             Ok(x) => {x},
             Err(_error)=> { panic!("Error connecting to database when checking if tag exists")},
         };
@@ -132,7 +132,7 @@ pub fn create_tag(conn: &Connection, p_tag: &str) -> Option<Tag> {
     }
 
     match conn.execute(
-        "INSERT INTO tags (id, tag)
+        "INSERT INTO tag (id, tag)
             VALUES(?1, ?2)",
         &[&new_tag.id as &ToSql,
             &new_tag.tag as &ToSql],
@@ -149,7 +149,7 @@ pub fn create_tag(conn: &Connection, p_tag: &str) -> Option<Tag> {
 
 pub fn delete_listing(conn: &mut rusqlite::Connection, p_listing: &Listing) -> Result<()> {
     let tx = conn.transaction()?;
-    tx.execute("DELETE from listing_tags WHERE listing_id = ?1", &[&p_listing.id])?;
+    tx.execute("DELETE from listing_tag WHERE listing_id = ?1", &[&p_listing.id])?;
     tx.execute("DELETE from listing WHERE id = ?1", &[&p_listing.id])?;
     tx.commit()
 }
@@ -157,7 +157,7 @@ pub fn delete_listing(conn: &mut rusqlite::Connection, p_listing: &Listing) -> R
 /// Deletes a listing tag while leaving associated tag untouched.
 pub fn delete_listing_tag(conn: &rusqlite::Connection, p_listing_tag_id: &str) -> Result<usize> {
     let res = conn.execute(
-        "DELETE from listing_tags WHERE id = ?1",
+        "DELETE from listing_tag WHERE id = ?1",
         &[&p_listing_tag_id as &ToSql],
     )?;
 
@@ -166,8 +166,8 @@ pub fn delete_listing_tag(conn: &rusqlite::Connection, p_listing_tag_id: &str) -
 
 pub fn delete_tag(conn: &mut rusqlite::Connection, p_tag_id: &str) -> Result<()> {
     let tx = conn.transaction()?;
-    tx.execute("DELETE from listing_tags WHERE tag_id = ?1", &[&p_tag_id])?;
-    tx.execute("DELETE from tags WHERE id = ?1", &[&p_tag_id])?;
+    tx.execute("DELETE from listing_tag WHERE tag_id = ?1", &[&p_tag_id])?;
+    tx.execute("DELETE from tag WHERE id = ?1", &[&p_tag_id])?;
     tx.commit()
 }
 

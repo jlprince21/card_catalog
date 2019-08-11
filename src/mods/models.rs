@@ -33,7 +33,7 @@ pub struct AppliedTag {
     pub file_name: String,
     pub file_path: String,
     pub file_size: i64,
-    pub listing_tags_id: String,
-    pub tags_id: String,
+    pub listing_tag_id: String,
+    pub tag_id: String,
     pub tag: String
 }

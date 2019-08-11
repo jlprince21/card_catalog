@@ -143,17 +143,17 @@ pub fn find_tagged_listings(conn: &rusqlite::Connection) -> Option<Vec<Models::A
     listing.file_name,
     listing.file_path,
     listing.file_size,
-    listing_tags.id as listing_tags_id,
-    tags.id as tags_id,
-    tags.tag
+    listing_tag.id as listing_tag_id,
+    tag.id as tag_id,
+    tag.tag
 from
     listing
     inner join
-        listing_tags
-        on (listing.id = listing_tags.listing_id)
+        listing_tag
+        on (listing.id = listing_tag.listing_id)
     inner join
-        tags
-        on (listing_tags.tag_id = tags.id);
+        tag
+        on (listing_tag.tag_id = tag.id);
     ")
         {
             Ok(x) => {x},
@@ -167,8 +167,8 @@ from
             file_name: row.get(2)?,
             file_path: row.get(3)?,
             file_size: row.get(4)?,
-            listing_tags_id: row.get(5)?,
-            tags_id: row.get(6)?,
+            listing_tag_id: row.get(5)?,
+            tag_id: row.get(6)?,
             tag: row.get(7)?,
         })) {
             Ok(x) => {

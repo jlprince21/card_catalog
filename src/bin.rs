@@ -44,7 +44,7 @@ fn main() {
     if let Some(matches) = matches.subcommand_matches("delete-tag") {
         // cargo run -- delete-tag 56982fc3-091a-489c-bd6c-c7f916965d4b
         let tag_id = matches.value_of("tag-id").unwrap_or("none");
-        println!("Deleting tag with id {} and all associated listing_tags.", tag_id);
+        println!("Deleting tag with id {} and all applied instances of tag.", tag_id);
         cc::delete_tag(tag_id);
         std::process::exit(0);
     }
