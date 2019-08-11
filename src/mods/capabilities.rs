@@ -3,9 +3,6 @@ extern crate walkdir;
 
 use self::walkdir::{WalkDir};
 
-use diesel::prelude::*;
-use diesel::sql_query;
-
 // file hashing
 use self::twox_hash::XxHash;
 use std::hash::Hasher;
@@ -20,7 +17,11 @@ use mods::util as Util;
 use mods::models as Models;
 use mods::sql as Sql;
 
-use Models::{Listing};
+use Models::{Listing, AppliedTag};
+
+use rusqlite::{Connection, NO_PARAMS, Result};
+
+use std::fs;
 
 pub enum ChecksumState {
     NotPresent,
@@ -28,76 +29,193 @@ pub enum ChecksumState {
     PresentWithChecksum
 }
 
-pub fn delete_listing_tag(conn: &PgConnection, listing_tag_id: &str) {
-    Sql::delete_listing_tag(conn, listing_tag_id);
+pub fn delete_listing_tag(conn: &Connection, listing_tag_id: &str) {
+    match Sql::delete_listing_tag(conn, listing_tag_id) {
+        Ok(x) => {
+            println!("Deleted {} listing tags with id '{}'", x, listing_tag_id);
+        },
+        Err(_err) => {
+            println!("Error deleting listing tag with id '{}'", listing_tag_id);
+        }
+    }
 }
 
-pub fn delete_missing_listings(conn: &PgConnection) {
+pub fn delete_missing_listings(conn: &mut Connection) {
     println!("Scanning for missing files.");
 
     match find_missing(&conn) {
         None => println!("none missing"),
-        Some(x) =>
+        Some(listings) =>
             {
                 println!("some missing");
-                for y in x {
-                    println!("removing listing for missing file: {}", y.file_path);
-                    Sql::delete_listing(conn, &y.file_path)
+                for curr_listing in listings {
+                    println!("removing listing for missing file: {}", curr_listing.file_path);
+                    match Sql::delete_listing(conn, &curr_listing) {
+                        Ok(_x) => {
+                            println!("Deleted listing with id {}", curr_listing.id);
+                        },
+                        Err(_err) => {
+                            println!("Error deleting listing with id {}", curr_listing.id);
+                        }
+                    }
                 }
             }
     }
 }
 
-pub fn delete_tag(conn: &PgConnection, tag_id: &str) {
-    Sql::delete_tag(conn, tag_id);
-}
-
-pub fn find_duplicates(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
-    let results = sql_query(include_str!("queries/duplicates.sql"))
-                    .load::<Listing>(conn);
-
-    match results {
-        Err(_error) => {
-            println!("Something went wrong with duplicate detection.");
-            None
+pub fn delete_tag(conn: &mut Connection, tag_id: &str) {
+    match Sql::delete_tag(conn, tag_id) {
+        Ok(_x) => {
+            println!("Tag with id {} deleted", tag_id);
         },
-        Ok(rows) => {
-            println!("{:?} duplicate files found.", &rows.len());
-            Some(rows)
+        Err(_err) => {
+            println!("Error deleting tag with id {}", tag_id);
         }
     }
 }
 
-pub fn find_tagged_listings(conn: &PgConnection) -> Option<Vec<Models::AppliedTag>> {
-    use Models::{AppliedTag};
+pub fn find_duplicates(conn: &Connection) -> Option<Vec<Models::Listing>> {
+    let query: String = match fs::read_to_string("src/mods/queries/duplicates.sql") {
+        Ok(_x) => {
+            _x
+        },
+        Err(_err) => {
+            panic!("Error preparing duplicates query")
+        }
+    };
 
-    let results = sql_query(include_str!("queries/applied_tags.sql"))
-                    .load::<AppliedTag>(conn);
+    let mut stmt = match conn
+        .prepare(&query)
+        {
+            Ok(x) => {x},
+            Err(_error)=> { panic!("Error connecting to database when checking for duplicates")},
+        };
 
-    match results {
-        Err(_error) => {
-            println!("Something went wrong with finding applied tags.");
+    let listing_iter = match stmt
+        .query_map(NO_PARAMS, |row| Ok(Listing {
+            id: row.get(0)?,
+            checksum: row.get(1)?,
+            time_created: row.get(2)?,
+            file_name: row.get(3)?,
+            file_path: row.get(4)?,
+            file_size: row.get(5)?
+        })) {
+            Ok(x) => {
+                x
+            },
+            Err(_error) => {
+                panic!("Failed to load results from query")
+            },
+        };
+
+    // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
+    let mut duplicate_listings: Vec<Listing> = Vec::new();
+
+    for listing in listing_iter {
+        duplicate_listings.insert(0, listing.unwrap());
+    }
+
+    println!("{:?} duplicate files found.", &duplicate_listings.len());
+
+    match duplicate_listings.len() {
+        0 => {
             None
         },
-        Ok(rows) => {
-            println!("{:?} listings with applied tags found.", &rows.len());
-            Some(rows)
+        _ => {
+            Some(duplicate_listings)
         }
     }
 }
 
-pub fn find_missing(conn: &PgConnection) -> Option<Vec<Models::Listing>> {
-    use Schema::listings::dsl::*;
+pub fn find_tagged_listings(conn: &Connection) -> Option<Vec<Models::AppliedTag>> {
+    // TODO 19-08-10 move query to a file
+    let query: String = match fs::read_to_string("src/mods/queries/applied_tags.sql") {
+        Ok(_x) => {
+            _x
+        },
+        Err(_err) => {
+            panic!("Error preparing duplicates query")
+        }
+    };
 
-    let results = listings
-        .load::<Listing>(conn)
-        .expect("Error loading listings");
+    let mut stmt = match conn
+        .prepare(&query)
+        {
+            Ok(x) => {x},
+            Err(_error)=> { panic!("Error connecting to database when checking for applied tags")},
+        };
 
+    let applied_tag_iter = match stmt
+        .query_map(NO_PARAMS, |row| Ok(AppliedTag {
+            listing_id: row.get(0)?,
+            checksum: row.get(1)?,
+            file_name: row.get(2)?,
+            file_path: row.get(3)?,
+            file_size: row.get(4)?,
+            listing_tag_id: row.get(5)?,
+            tag_id: row.get(6)?,
+            tag: row.get(7)?,
+        })) {
+            Ok(x) => {
+                x
+            },
+            Err(_error) => {
+                panic!("Failed to load results from query")
+            },
+        };
+
+    // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
+    let mut applied_tags: Vec<AppliedTag> = Vec::new();
+
+    for applied in applied_tag_iter {
+        applied_tags.insert(0, applied.unwrap());
+    }
+
+    println!("{:?} applied tags found.", &applied_tags.len());
+
+    match applied_tags.len() {
+        0 => {
+            None
+        },
+        _ => {
+            Some(applied_tags)
+        }
+    }
+}
+
+pub fn find_missing(conn: &Connection) -> Option<Vec<Models::Listing>> {
+     let mut stmt = match conn
+        .prepare("SELECT id, checksum, time_created, file_name, file_path, file_size FROM listing") {
+            Ok(x) => {x},
+            Err(_error)=> { panic!("Error connecting to database when gathering listings")},
+        };
+
+    let listing_iter = match stmt
+        .query_map(NO_PARAMS, |row| Ok(Listing {
+            id: row.get(0)?,
+            checksum: row.get(1)?,
+            time_created: row.get(2)?,
+            file_name: row.get(3)?,
+            file_path: row.get(4)?,
+            file_size: row.get(5)?,
+        })) {
+            Ok(x) => {
+                x
+            },
+            Err(_error) => {
+                panic!("Failed to load results from query")
+            },
+        };
+
+    // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
     let mut missing: Vec<Models::Listing> = Vec::new();
 
-    for listing in results {
-        if !Util::does_file_exist(&Util::unescape_sql_string(&listing.file_path)) {
-            missing.push(listing);
+    for listing in listing_iter {
+        let the_listing: Listing = listing.unwrap();
+
+        if !Util::does_file_exist(&Util::unescape_sql_string(&the_listing.file_path)) {
+            println!("Found missing {}", &the_listing.file_path);
+            missing.push(the_listing);
         }
     }
 
@@ -134,7 +252,7 @@ pub fn hash_file(file_name: &str) -> String {
     format!("{:x}", hash)
 }
 
-pub fn is_file_hashed(file_path_to_check: &str, conn: &PgConnection) -> (ChecksumState, Option<String>) {
+pub fn is_file_hashed(file_path_to_check: &str, conn: &Connection) -> (ChecksumState, Option<String>) {
     let results = Sql::find_single_file(conn, file_path_to_check);
 
     if results.is_empty(){
@@ -146,7 +264,45 @@ pub fn is_file_hashed(file_path_to_check: &str, conn: &PgConnection) -> (Checksu
     }
 }
 
-pub fn start_hashing(root_directory: &str, conn: &PgConnection) {
+pub fn setup(conn: &Connection) -> Result<()> {
+    conn.execute(
+        "CREATE TABLE listing (
+	        id	TEXT NOT NULL,
+	        checksum	TEXT,
+	        time_created	TEXT NOT NULL,
+	        file_name	TEXT NOT NULL,
+	        file_path	TEXT NOT NULL,
+	        file_size	INTEGER,
+	        PRIMARY KEY(id)
+        )",
+        NO_PARAMS,
+    )?;
+
+    conn.execute(
+        "CREATE TABLE tag (
+	        id	TEXT,
+	        tag	TEXT NOT NULL,
+	        PRIMARY KEY(id)
+        )",
+        NO_PARAMS,
+    )?;
+
+    conn.execute(
+        "CREATE TABLE listing_tag (
+	        id	TEXT,
+	        listing_id	TEXT NOT NULL,
+	        tag_id	TEXT NOT NULL,
+	        PRIMARY KEY(id),
+	        FOREIGN KEY(listing_id) REFERENCES listing(id),
+            FOREIGN KEY(tag_id) REFERENCES tag(id)
+        )",
+        NO_PARAMS,
+    )?;
+
+    Ok(())
+}
+
+pub fn start_hashing(root_directory: &str, conn: &Connection) {
     let walker = WalkDir::new(root_directory).into_iter();
     for entry in walker.filter_map(|e| e.ok()) {
         if Util::is_dir(&entry) {
@@ -161,11 +317,15 @@ pub fn start_hashing(root_directory: &str, conn: &PgConnection) {
                 {
                     // TODO 18-09-22 Need to research diesel error checking and see if strings can be cleaned up
                     println!("hashing new file: {}", &file_path);
-                    Sql::create_listing(&conn,
+                    match Sql::create_listing(
+                                &conn,
                                 &hash_file(&file_path),
                                 &Util::escape_sql_string(&entry.file_name().to_str().unwrap().to_string()),
                                 &Util::escape_sql_string(&entry.path().display().to_string()),
-                                &Util::get_file_len(&file_path));
+                                &Util::get_file_len(&file_path)) {
+                                    Ok(_x) => (),
+                                    Err(_error) => panic!("Insert failed"),
+                                };
                 }
                 (ChecksumState::PresentButNoChecksum, Some(x)) =>
                 {
@@ -179,18 +339,18 @@ pub fn start_hashing(root_directory: &str, conn: &PgConnection) {
     }
 }
 
-pub fn create_tag(conn: &PgConnection, tag: &str) {
+pub fn create_tag(conn: &Connection, tag: &str) {
     Sql::create_tag(conn, tag);
 }
 
-pub fn create_listing_tag(conn: &PgConnection, listing_id: &str, tag_id: &str) {
+pub fn create_listing_tag(conn: &Connection, listing_id: &str, tag_id: &str) {
     Sql::create_listing_tag(conn, listing_id, tag_id);
 }
 
-pub fn tag_listing(conn: &PgConnection, listing_id: &str, tag_name: &str) {
+pub fn tag_listing(conn: &Connection, listing_id: &str, tag_name: &str) {
     use Models::Tag;
 
     // since tags and listing tags will be made if not existant, we can take advantage of the create SQL
-    let the_tag: Tag = Sql::create_tag(conn, tag_name);
+    let the_tag: Tag = Sql::create_tag(conn, tag_name).unwrap();
     Sql::create_listing_tag(conn, listing_id, &the_tag.id);
 }

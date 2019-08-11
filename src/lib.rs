@@ -7,15 +7,9 @@
 extern crate clap;
 extern crate config;
 
-#[macro_use]
-extern crate diesel;
-
+extern crate rusqlite;
+extern crate time;
 extern crate uuid;
-
-use clap::{Arg, App, SubCommand};
-
-pub mod schema;
-use ::schema as Schema;
 
 pub mod mods;
 use mods::util as Util;
@@ -27,11 +21,11 @@ pub mod cc {
     use Capabilities;
     use Sql;
     use Util;
-    use diesel::{PgConnection};
+    use rusqlite::{Connection};
 
-    fn get_connection() -> PgConnection {
+    fn get_connection() -> Connection {
         let settings: Util::Settings = Util::get_settings();
-        Sql::establish_connection(&settings.pg_connection_string)
+        Sql::establish_connection(&settings.sqlite_connection_string)
     }
 
     pub fn duplicates() {
@@ -46,7 +40,20 @@ pub mod cc {
 
     pub fn orphans() {
         println!("Removing orphans from database...");
-        Capabilities::delete_missing_listings(&get_connection());
+        Capabilities::delete_missing_listings(&mut get_connection());
+    }
+
+    pub fn setup() {
+        println!("Setting up database...");
+        match Capabilities::setup(&get_connection()) {
+            Ok(_x) => {
+                println!("Database setup successfully.");
+            },
+            Err(_err) => {
+                println!("Error when trying to setup database.");
+            }
+        };
+        std::process::exit(0);
     }
 
     pub fn tag(listing_id: &str, tags: Vec<&str>) {
@@ -58,7 +65,7 @@ pub mod cc {
     }
 
     pub fn delete_tag(tag_id: &str) {
-        Capabilities::delete_tag(&get_connection(), tag_id);
+        Capabilities::delete_tag(&mut get_connection(), tag_id);
     }
 
     pub fn new_tag(tag: &str) {

@@ -5,21 +5,15 @@
 extern crate clap;
 extern crate config;
 
-#[macro_use]
-extern crate diesel;
-
+extern crate rusqlite;
+extern crate time;
 extern crate uuid;
 
 use clap::{Arg, App, SubCommand};
 
-pub mod schema;
-use ::schema as Schema;
-
 pub mod mods;
 use mods::util as Util;
 use mods::models as Models;
-use mods::sql as Sql;
-use mods::capabilities as Capabilities;
 
 extern crate card_catalog;
 use card_catalog::cc;
@@ -42,7 +36,7 @@ fn main() {
     if let Some(matches) = matches.subcommand_matches("delete-tag-listing") {
         // cargo run -- delete-tag-listing 56982fc3-091a-489c-bd6c-c7f916965d4b
         let listing_tag_id = matches.value_of("listing-tag-id").unwrap_or("none");
-        println!("Deleting tag listing with id {}.", listing_tag_id);
+        println!("Deleting tag listing with id {}", listing_tag_id);
         cc::delete_tag_listing(listing_tag_id);
         std::process::exit(0);
     }
@@ -50,7 +44,7 @@ fn main() {
     if let Some(matches) = matches.subcommand_matches("delete-tag") {
         // cargo run -- delete-tag 56982fc3-091a-489c-bd6c-c7f916965d4b
         let tag_id = matches.value_of("tag-id").unwrap_or("none");
-        println!("Deleting tag with id {} and all associated listing_tags.", tag_id);
+        println!("Deleting tag with id {} and all applied instances of tag.", tag_id);
         cc::delete_tag(tag_id);
         std::process::exit(0);
     }
@@ -73,6 +67,9 @@ fn main() {
         },
         "orphans" => {
             cc::orphans();
+        },
+        "setup" => {
+            cc::setup();
         }
         _ => {
             println!("No valid args provided, exiting.");

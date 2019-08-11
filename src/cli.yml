@@ -12,6 +12,7 @@ args:
         - duplicates
         - hash
         - orphans
+        - setup
 subcommands:
   - delete-tag:
       about: Deletes a tag and all applications of it.

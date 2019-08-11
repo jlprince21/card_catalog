@@ -1,142 +1,221 @@
-use diesel;
-use diesel::prelude::*;
-
 use uuid::Uuid;
 
-use Models::{NewListing, Listing, NewTag, Tag, NewListingTag, ListingTag};
+extern crate rusqlite;
 
-pub fn create_listing(conn: &PgConnection, checksum: &str, file_name: &str, file_path: &str, file_size: &i64) -> Listing {
-    use Schema::listings;
+use rusqlite::types::ToSql;
+use rusqlite::{Connection, Result, NO_PARAMS};
 
-    let new_listing = NewListing {
-        id: &Uuid::new_v4().to_string(),
-        checksum,
-        file_name,
-        file_path,
-        file_size,
+use Models::{Listing, ListingTag, Tag};
+
+pub fn create_listing(conn: &Connection, checksum: &str, file_name: &str, file_path: &str, file_size: &i64) -> Result<()> {
+
+    // TODO 19-08-08 the checksum here may need to have an alteration in event of being empty; not sure if this code is safe
+    let new_listing = Listing {
+        id: Uuid::new_v4().to_string(),
+        checksum: Some(checksum.to_string()),
+        time_created: time::get_time(),
+        file_name: file_name.to_string(),
+        file_path: file_path.to_string(),
+        file_size: *file_size
     };
 
-    diesel::insert_into(listings::table)
-        .values(&new_listing)
-        .get_result(conn)
-        .expect("Error saving new listing")
+    conn.execute(
+        "INSERT INTO listing
+                (id, checksum, time_created, file_name, file_path, file_size)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        &[&new_listing.id as &ToSql,
+            &new_listing.checksum as &ToSql,
+            &new_listing.time_created,
+            &new_listing.file_name as &ToSql,
+            &new_listing.file_path as &ToSql,
+            &new_listing.file_size as &ToSql],
+    )?;
+
+    Ok(())
 }
 
-pub fn create_listing_tag(conn: &PgConnection, p_listing_id: &str, p_tag_id: &str) -> ListingTag {
-    use Schema::listing_tags;
-    use Schema::listing_tags::dsl::*;
-
-    let new_listing_tag = NewListingTag {
-        id: &Uuid::new_v4().to_string(),
-        listing_id: &p_listing_id,
-        tag_id: &p_tag_id
+pub fn create_listing_tag(conn: &Connection, p_listing_id: &str, p_tag_id: &str) -> Option<ListingTag> {
+    let new_listing_tag = ListingTag {
+        id: Uuid::new_v4().to_string(),
+        listing_id: p_listing_id.to_string(),
+        tag_id: p_tag_id.to_string()
     };
 
-    let single_listing_tag: Vec<ListingTag> = listing_tags
-                                                .filter(listing_id.eq(p_listing_id))
-                                                .filter(tag_id.eq(p_tag_id))
-                                                .limit(1)
-                                                .load::<ListingTag>(conn)
-                                                .expect("Error loading listing tag");
+    let mut stmt = match conn
+        .prepare(&format!("SELECT id, listing_id, tag_id FROM listing_tag where listing_id = '{}' AND tag_id = '{}'", &p_listing_id, &p_tag_id)) {
+            Ok(x) => {x},
+            Err(_error)=> { panic!("Error connecting to database when checking if listing is already tagged")},
+        };
+
+    let tag_iter = match stmt
+        .query_map(NO_PARAMS, |row| Ok(ListingTag {
+            id: row.get(0)?,
+            listing_id: row.get(1)?,
+            tag_id: row.get(2)?,
+        })) {
+            Ok(x) => {
+                x
+            },
+            Err(_error) => {
+                panic!("Failed to load results from query")
+            },
+        };
+
+    // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
+    let mut single_listing_tag: Vec<ListingTag> = Vec::new();
+
+    for tag in tag_iter {
+        single_listing_tag.insert(0, tag.unwrap());
+    }
 
     match single_listing_tag.len() {
         0 => {
-                // TODO 18-10-13 Need proper error handling for when inserts fail eg foreign key violations.
-                diesel::insert_into(listing_tags::table)
-                    .values(&new_listing_tag)
-                    .get_result(conn)
-                    .expect("Error saving new listing tag")
+                match conn.execute(
+                    "INSERT INTO listing_tag (id, listing_id, tag_id)
+                        VALUES(?1, ?2, ?3)",
+                    &[&new_listing_tag.id as &ToSql,
+                        &new_listing_tag.listing_id as &ToSql,
+                        &new_listing_tag.tag_id as &ToSql],
+                ) {
+                    Ok(_inserted) => {
+                        println!("Tag '{}' created and applied to listing '{}'", p_tag_id, p_listing_id);
+                        return Some(new_listing_tag);
+                    },
+                    Err(_err) => {
+                        panic!("Failed to create new tag.")
+                    }
+                }
             },
         _ => {
+            println!("listing is already tagged, returning existing tag");
             let result: ListingTag = single_listing_tag.into_iter().nth(0).expect("Failed to load existing listing tag.");
-            result
+            Some(result)
         }
     }
 }
 
-pub fn create_tag(conn: &PgConnection, p_tag: &str) -> Tag {
-    use Schema::tags;
-    use Schema::tags::dsl::*;
-
-    let new_tag = NewTag {
-        id: &Uuid::new_v4().to_string(),
-        tag: p_tag
+pub fn create_tag(conn: &Connection, p_tag: &str) -> Option<Tag> {
+    let new_tag = Tag {
+        id: Uuid::new_v4().to_string(),
+        tag: p_tag.to_string()
     };
 
-    let single_tag: Vec<Tag> = tags
-                                .filter(tag.eq(p_tag))
-                                .limit(1)
-                                .load::<Tag>(conn)
-                                .expect("Error loading tag");
+    let mut stmt = match conn
+        .prepare(&format!("SELECT id, tag FROM tag where tag = '{}'", &p_tag)) {
+            Ok(x) => {x},
+            Err(_error)=> { panic!("Error connecting to database when checking if tag exists")},
+        };
 
-    match single_tag.len() {
-        0 => {
-            // TODO 18-10-13 Need proper error handling for when inserts fail eg foreign key violations.
-            diesel::insert_into(tags::table)
-                .values(&new_tag)
-                .get_result(conn)
-                .expect("Error saving new tag")
+    let tag_iter = match stmt
+        .query_map(NO_PARAMS, |row| Ok(Tag {
+            id: row.get(0)?,
+            tag: row.get(1)?,
+        })) {
+            Ok(x) => {
+                x
             },
-        _ => {
-            let result: Tag = single_tag.into_iter().nth(0).expect("Failed to load existing tag.");
-            result
-        }
+            Err(_error) => {
+                panic!("Failed to load results from query")
+            },
+        };
+
+    // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
+    let mut single_tag: Vec<Tag> = Vec::new();
+
+    for tag in tag_iter {
+        single_tag.insert(0, tag.unwrap());
     }
+
+    if single_tag.len() == 1 {
+        println!("Found existing tag");
+        return Some(single_tag.first().cloned().unwrap()); // TODO 19-08-09 not a huge fan of cloning, hope to make this better
+    }
+
+    match conn.execute(
+        "INSERT INTO tag (id, tag)
+            VALUES(?1, ?2)",
+        &[&new_tag.id as &ToSql,
+            &new_tag.tag as &ToSql],
+    ) {
+        Ok(_inserted) => {
+            println!("New tag '{}' created", p_tag);
+            return Some(new_tag);
+        },
+        Err(_err) => {
+            panic!("Failed to create new tag.")
+        }
+    };
 }
 
-pub fn delete_listing(conn: &PgConnection, p_file_path: &str) {
-    use Schema::listings::dsl::*;
-
-    // TODO 18-09-23 One day, may want to mark listings as deleted instead of removing them
-    diesel::delete(listings.filter(file_path.eq(p_file_path)))
-        .execute(conn)
-        .expect("Error deleting listing");
+pub fn delete_listing(conn: &mut Connection, p_listing: &Listing) -> Result<()> {
+    let tx = conn.transaction()?;
+    tx.execute("DELETE from listing_tag WHERE listing_id = ?1", &[&p_listing.id])?;
+    tx.execute("DELETE from listing WHERE id = ?1", &[&p_listing.id])?;
+    tx.commit()
 }
 
 /// Deletes a listing tag while leaving associated tag untouched.
-pub fn delete_listing_tag(conn: &PgConnection, p_listing_tag_id: &str) {
-    use Schema::listing_tags::dsl::*;
+pub fn delete_listing_tag(conn: &Connection, p_listing_tag_id: &str) -> Result<usize> {
+    let res = conn.execute(
+        "DELETE from listing_tag WHERE id = ?1",
+        &[&p_listing_tag_id as &ToSql],
+    )?;
 
-    // TODO 18-10-20 One day, may want to mark listing_tags as deleted instead of removing them
-    diesel::delete(listing_tags.filter(id.eq(p_listing_tag_id)))
-        .execute(conn)
-        .expect("Error deleting listing tag");
+    Ok(res)
 }
 
-pub fn delete_tag(conn: &PgConnection, p_tag_id: &str) {
-    // TODO 18-10-20 Feels hacky putting these deletes in blocks to avoid ambiguity on the id column... would like to see this nicer
-    // TODO 18-10-20 One day, may want to mark listing_tags and tags as deleted instead of removing them
-    {
-        use Schema::listing_tags::dsl::*;
-        diesel::delete(listing_tags.filter(tag_id.eq(p_tag_id)))
-            .execute(conn)
-            .expect("Error deleting listing tag");
+pub fn delete_tag(conn: &mut Connection, p_tag_id: &str) -> Result<()> {
+    let tx = conn.transaction()?;
+    tx.execute("DELETE from listing_tag WHERE tag_id = ?1", &[&p_tag_id])?;
+    tx.execute("DELETE from tag WHERE id = ?1", &[&p_tag_id])?;
+    tx.commit()
+}
+
+pub fn establish_connection(connection: &str) -> Connection {
+    Connection::open(&connection).unwrap_or_else(|_| panic!("Error connecting to {}", connection))
+}
+
+pub fn find_single_file(conn: &Connection, p_file_path: &str) -> Vec<Listing> {
+    let mut stmt = match conn
+        .prepare(&format!("SELECT id, checksum, time_created, file_name, file_path, file_size FROM listing where file_path='{}'", &p_file_path))
+        {
+            Ok(x) => {x},
+            Err(_error)=> { panic!("Error connecting to database when checking if file hashed")},
+        };
+
+    let listing_iter = match stmt
+        .query_map(NO_PARAMS, |row| Ok(Listing {
+            id: row.get(0)?,
+            checksum: row.get(1)?,
+            time_created: row.get(2)?,
+            file_name: row.get(3)?,
+            file_path: row.get(4)?,
+            file_size: row.get(5)?
+        })) {
+            Ok(x) => {
+                x
+            },
+            Err(_error) => {
+                panic!("Failed to load results from query")
+            },
+        };
+
+    // TODO 19-08-08 this is all a little hacky and may be condensable to one or two lines
+    let mut single_listing: Vec<Listing> = Vec::new();
+
+    for listing in listing_iter {
+        single_listing.insert(0, listing.unwrap());
     }
-    {
-        use Schema::tags::dsl::*;
-        diesel::delete(tags.filter(id.eq(p_tag_id)))
-            .execute(conn)
-            .expect("Error deleting tag");
+
+    single_listing
+}
+
+pub fn update_hash(conn: &Connection, id: &str, hash: &str) {
+    let query = format!("UPDATE listing SET checksum = '{}' WHERE id = '{}'", &hash, &id).to_string();
+
+    match conn.execute(&query, NO_PARAMS) {
+        Ok(updated) => println!("updated hash for {} row with id {}", updated, id),
+        Err(_err) => panic!("Unable to find listing with id {}", id),
     }
-}
 
-pub fn establish_connection(connection: &str) -> PgConnection {
-    PgConnection::establish(&connection).unwrap_or_else(|_| panic!("Error connecting to {}", connection))
-}
-
-pub fn find_single_file(conn: &PgConnection, p_file_path: &str) -> Vec<Listing> {
-    use Schema::listings::dsl::*;
-    listings
-        .filter(file_path.eq(p_file_path))
-        .limit(1)
-        .load::<Listing>(conn)
-        .expect("Error loading listing")
-}
-
-pub fn update_hash(conn: &PgConnection, id: &str, hash: &str) {
-    use Schema::listings::dsl::{listings, checksum};
-    diesel::update(listings.find(id))
-        .set(checksum.eq(hash))
-        .get_result::<Listing>(conn)
-        .unwrap_or_else(|_| panic!("Unable to find listing with id {}", id));
 }
