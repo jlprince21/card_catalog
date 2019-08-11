@@ -1,19 +1,17 @@
 select
-    listings.id as listing_id,
-    listings.checksum,
-    listings.file_name,
-    listings.file_path,
-    listings.file_size,
-    listing_tags.id as listing_tags_id,
-    tags.id as tags_id,
-    tags.tag
+    listing.id as listing_id,
+    listing.checksum,
+    listing.file_name,
+    listing.file_path,
+    listing.file_size,
+    listing_tag.id as listing_tag_id,
+    tag.id as tag_id,
+    tag.tag
 from
-    listings
+    listing
     inner join
-        listing_tags
-        on (listings.id = listing_tags.listing_id)
+        listing_tag
+        on (listing.id = listing_tag.listing_id)
     inner join
-        tags
-        on (listing_tags.tag_id = tags.id);
---	where listings.id = '145ef410-81f5-4c41-948c-246951561f5b'
-
+        tag
+        on (listing_tag.tag_id = tag.id);

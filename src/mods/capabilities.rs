@@ -21,6 +21,8 @@ use Models::{Listing, AppliedTag};
 
 use rusqlite::{Connection, NO_PARAMS};
 
+use std::fs;
+
 pub enum ChecksumState {
     NotPresent,
     PresentButNoChecksum,
@@ -73,25 +75,17 @@ pub fn delete_tag(conn: &mut Connection, tag_id: &str) {
 }
 
 pub fn find_duplicates(conn: &Connection) -> Option<Vec<Models::Listing>> {
-    // TODO 19-08-10 move query to a file
+    let query: String = match fs::read_to_string("src/mods/queries/duplicates.sql") {
+        Ok(_x) => {
+            _x
+        },
+        Err(_err) => {
+            panic!("Error preparing duplicates query")
+        }
+    };
+
     let mut stmt = match conn
-        .prepare("SELECT * FROM listing
-WHERE
-    checksum IN (
-        SELECT
-            checksum
-        FROM (
-            SELECT
-                checksum,
-                ROW_NUMBER()
-                OVER (PARTITION BY
-                        checksum
-                    ORDER BY
-                        id ASC) AS Row
-                FROM
-                    listing) dups
-            WHERE
-                dups.Row > 1)")
+        .prepare(&query)
         {
             Ok(x) => {x},
             Err(_error)=> { panic!("Error connecting to database when checking for duplicates")},
@@ -135,26 +129,17 @@ WHERE
 
 pub fn find_tagged_listings(conn: &Connection) -> Option<Vec<Models::AppliedTag>> {
     // TODO 19-08-10 move query to a file
+    let query: String = match fs::read_to_string("src/mods/queries/applied_tags.sql") {
+        Ok(_x) => {
+            _x
+        },
+        Err(_err) => {
+            panic!("Error preparing duplicates query")
+        }
+    };
+
     let mut stmt = match conn
-        .prepare("
-        select
-    listing.id as listing_id,
-    listing.checksum,
-    listing.file_name,
-    listing.file_path,
-    listing.file_size,
-    listing_tag.id as listing_tag_id,
-    tag.id as tag_id,
-    tag.tag
-from
-    listing
-    inner join
-        listing_tag
-        on (listing.id = listing_tag.listing_id)
-    inner join
-        tag
-        on (listing_tag.tag_id = tag.id);
-    ")
+        .prepare(&query)
         {
             Ok(x) => {x},
             Err(_error)=> { panic!("Error connecting to database when checking for applied tags")},

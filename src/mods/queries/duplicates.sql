@@ -1,7 +1,4 @@
-SELECT
-    *
-FROM
-    public.listings
+SELECT * FROM listing
 WHERE
     checksum IN (
         SELECT
@@ -15,6 +12,6 @@ WHERE
                     ORDER BY
                         id ASC) AS Row
                 FROM
-                    public.listings) dups
+                    listing) dups
             WHERE
                 dups.Row > 1)
