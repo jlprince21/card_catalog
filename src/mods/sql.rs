@@ -7,6 +7,8 @@ use rusqlite::{Connection, Result, NO_PARAMS};
 
 use Models::{Listing, ListingTag, Tag};
 
+use mods::util as Util;
+
 pub fn create_listing(conn: &Connection, checksum: &str, file_name: &str, file_path: &str, file_size: &i64) -> Result<()> {
 
     // TODO 19-08-08 the checksum here may need to have an alteration in event of being empty; not sure if this code is safe
@@ -49,9 +51,9 @@ pub fn create_listing_tag(conn: &Connection, p_listing_id: &str, p_tag_id: &str)
 
     let tag_iter = match stmt
         .query_map(NO_PARAMS, |row| Ok(ListingTag {
-            id: row.get(0)?,
-            listing_id: row.get(1)?,
-            tag_id: row.get(2)?,
+            id: row.get("id")?,
+            listing_id: row.get("listing_id")?,
+            tag_id: row.get("tag_id")?,
         })) {
             Ok(x) => {
                 x
@@ -108,8 +110,8 @@ pub fn create_tag(conn: &Connection, p_tag: &str) -> Option<Tag> {
 
     let tag_iter = match stmt
         .query_map(NO_PARAMS, |row| Ok(Tag {
-            id: row.get(0)?,
-            tag: row.get(1)?,
+            id: row.get("id")?,
+            tag: row.get("tag")?,
         })) {
             Ok(x) => {
                 x
@@ -177,7 +179,7 @@ pub fn establish_connection(connection: &str) -> Connection {
 
 pub fn find_single_file(conn: &Connection, p_file_path: &str) -> Vec<Listing> {
     let mut stmt = match conn
-        .prepare(&format!("SELECT id, checksum, time_created, file_name, file_path, file_size FROM listing where file_path='{}'", &p_file_path))
+        .prepare(&format!("SELECT id, checksum, time_created, file_name, file_path, file_size FROM listing where file_path='{}'", &Util::escape_sql_string(&p_file_path)))
         {
             Ok(x) => {x},
             Err(_error)=> { panic!("Error connecting to database when checking if file hashed")},
@@ -185,12 +187,12 @@ pub fn find_single_file(conn: &Connection, p_file_path: &str) -> Vec<Listing> {
 
     let listing_iter = match stmt
         .query_map(NO_PARAMS, |row| Ok(Listing {
-            id: row.get(0)?,
-            checksum: row.get(1)?,
-            time_created: row.get(2)?,
-            file_name: row.get(3)?,
-            file_path: row.get(4)?,
-            file_size: row.get(5)?
+            id: row.get("id")?,
+            checksum: row.get("checksum")?,
+            time_created: row.get("time_created")?,
+            file_name: row.get("file_name")?,
+            file_path: row.get("file_path")?,
+            file_size: row.get("file_size")?
         })) {
             Ok(x) => {
                 x

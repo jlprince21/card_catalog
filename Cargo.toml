@@ -2,7 +2,7 @@ cargo-features = ["rename-dependency"]
 
 [package]
 name = "card_catalog"
-version = "1.1.0"
+version = "1.1.1"
 authors = ["Luke Prince <luke@theprinces.org>"]
 exclude = [
     "documentation/*"

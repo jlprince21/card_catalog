@@ -44,18 +44,16 @@ pub fn delete_missing_listings(conn: &mut Connection) {
     println!("Scanning for missing files.");
 
     match find_missing(&conn) {
-        None => println!("none missing"),
+        None => println!("No orphans found"),
         Some(listings) =>
             {
-                println!("some missing");
                 for curr_listing in listings {
-                    println!("removing listing for missing file: {}", curr_listing.file_path);
                     match Sql::delete_listing(conn, &curr_listing) {
                         Ok(_x) => {
-                            println!("Deleted listing with id {}", curr_listing.id);
+                            println!("Deleted missing listing with id {}", curr_listing.id);
                         },
                         Err(_err) => {
-                            println!("Error deleting listing with id {}", curr_listing.id);
+                            println!("Error deleting missing listing with id {}", curr_listing.id);
                         }
                     }
                 }
@@ -93,12 +91,12 @@ pub fn find_duplicates(conn: &Connection) -> Option<Vec<Models::Listing>> {
 
     let listing_iter = match stmt
         .query_map(NO_PARAMS, |row| Ok(Listing {
-            id: row.get(0)?,
-            checksum: row.get(1)?,
-            time_created: row.get(2)?,
-            file_name: row.get(3)?,
-            file_path: row.get(4)?,
-            file_size: row.get(5)?
+            id: row.get("id")?,
+            checksum: row.get("checksum")?,
+            time_created: row.get("time_created")?,
+            file_name: row.get("file_name")?,
+            file_path: row.get("file_path")?,
+            file_size: row.get("file_size")?
         })) {
             Ok(x) => {
                 x
@@ -147,14 +145,14 @@ pub fn find_tagged_listings(conn: &Connection) -> Option<Vec<Models::AppliedTag>
 
     let applied_tag_iter = match stmt
         .query_map(NO_PARAMS, |row| Ok(AppliedTag {
-            listing_id: row.get(0)?,
-            checksum: row.get(1)?,
-            file_name: row.get(2)?,
-            file_path: row.get(3)?,
-            file_size: row.get(4)?,
-            listing_tag_id: row.get(5)?,
-            tag_id: row.get(6)?,
-            tag: row.get(7)?,
+            listing_id: row.get("listing_id")?,
+            checksum: row.get("checksum")?,
+            file_name: row.get("file_name")?,
+            file_path: row.get("file_path")?,
+            file_size: row.get("file_size")?,
+            listing_tag_id: row.get("listing_tag_id")?,
+            tag_id: row.get("tag_id")?,
+            tag: row.get("tag")?,
         })) {
             Ok(x) => {
                 x
@@ -192,12 +190,12 @@ pub fn find_missing(conn: &Connection) -> Option<Vec<Models::Listing>> {
 
     let listing_iter = match stmt
         .query_map(NO_PARAMS, |row| Ok(Listing {
-            id: row.get(0)?,
-            checksum: row.get(1)?,
-            time_created: row.get(2)?,
-            file_name: row.get(3)?,
-            file_path: row.get(4)?,
-            file_size: row.get(5)?,
+            id: row.get("id")?,
+            checksum: row.get("checksum")?,
+            time_created: row.get("time_created")?,
+            file_name: row.get("file_name")?,
+            file_path: row.get("file_path")?,
+            file_size: row.get("file_size")?,
         })) {
             Ok(x) => {
                 x
