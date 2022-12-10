@@ -1,3 +1,5 @@
+# This project is no longer under active development. The project is still public since it is available on crates.io. Use at your own risk.
+
 # Card Catalog
 
 [![Build Status](https://travis-ci.org/jlprince21/card_catalog.svg?branch=master)](https://travis-ci.org/jlprince21/card_catalog)
